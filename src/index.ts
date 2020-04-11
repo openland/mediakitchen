@@ -9,6 +9,13 @@ export {
     IceState,
     RtpCodecCapability,
     RtpParameters,
+    RtpCodecParameters,
+    RtpHeaderExtensionParameters,
+    RtpHeaderExtensionCodec,
+    RtpCapabilities,
+    RtpEncoding,
+    RtcpParameters,
+    RtcpFeedback,
     SimpleMap
 } from './wire/common';
 

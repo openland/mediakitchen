@@ -54,6 +54,7 @@ export const rtcpFeedbackCodec = t.intersection([t.type({
 }), t.partial({
     parameter: t.string
 })]);
+export type RtcpFeedback = t.TypeOf<typeof rtcpFeedbackCodec>;
 
 // RTP Codec Capability
 
@@ -81,6 +82,8 @@ export const rtpCodecParametersCodec = t.intersection([t.type({
     rtcpFeedback: t.array(rtcpFeedbackCodec)
 })]);
 
+export type RtpCodecParameters = t.TypeOf<typeof rtpCodecParametersCodec>;
+
 // RTP Header Extension Parameters
 
 export const rtpHeaderExtensionParametersCodec = t.intersection([t.type({
@@ -90,6 +93,7 @@ export const rtpHeaderExtensionParametersCodec = t.intersection([t.type({
     encrypt: t.boolean,
     parameters: simpleMapCodec
 })]);
+export type RtpHeaderExtensionParameters = t.TypeOf<typeof rtpHeaderExtensionParametersCodec>;
 
 export const rtpHeaderExtensionCodec = t.intersection([t.type({
     uri: t.string,
@@ -99,6 +103,7 @@ export const rtpHeaderExtensionCodec = t.intersection([t.type({
     preferredEncrypt: t.boolean,
     direction: t.union([t.literal('sendrecv'), t.literal('sendonly'), t.literal('recvonly'), t.literal('inactive')])
 })]);
+export type RtpHeaderExtensionCodec = t.TypeOf<typeof rtpHeaderExtensionCodec>;
 
 // RTP Encoding
 
@@ -110,6 +115,7 @@ export const rtpEncodingCodec = t.partial({
     dtx: t.boolean,
     scalabilityMode: t.string
 });
+export type RtpEncoding = t.TypeOf<typeof rtpEncodingCodec>;
 
 // RTCP Parameters
 
@@ -118,6 +124,7 @@ export const rtcpParameters = t.partial({
     reducedSize: t.boolean,
     mux: t.boolean
 });
+export type RtcpParameters = t.TypeOf<typeof rtcpParameters>;
 
 // RTP Parameters
 
@@ -139,3 +146,4 @@ export const rtpCapabilitiesCodec = t.partial({
     headerExtensions: t.array(rtpHeaderExtensionCodec),
     fecMechanisms: t.array(t.string)
 })
+export type RtpCapabilities = t.TypeOf<typeof rtpCapabilitiesCodec>;
