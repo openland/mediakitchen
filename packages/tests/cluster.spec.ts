@@ -1,8 +1,7 @@
-import { ConnectionInfo } from './../client/ConnectionInfo';
 import { connect, Payload } from "ts-nats";
-import { createWorker } from "../server/createWorker";
-import { connectToCluster } from "../client/Cluster";
-import { delay } from "../utils/delay";
+import { delay } from 'mediakitchen-common';
+import { createWorker } from 'mediakitchen-server';
+import { ConnectionInfo, connectToCluster } from 'mediakitchen';
 
 describe('Cluster', () => {
 

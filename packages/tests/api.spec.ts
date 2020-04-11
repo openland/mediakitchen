@@ -1,10 +1,10 @@
-import { ConnectionInfo } from './../client/ConnectionInfo';
-import { KitchenApi } from './../client/model/KitchenApi';
-import { connect, Payload } from "ts-nats";
-import { createWorker } from "../server/createWorker";
-import { randomKey } from '../utils/randomKey';
-import { delay } from '../utils/delay';
-import { Event } from '../wire/events';
+import { connect, Payload } from 'ts-nats';
+import {
+    ConnectionInfo
+} from 'mediakitchen';
+import { randomKey, delay, Event } from 'mediakitchen-common';
+import { createWorker } from 'mediakitchen-server';
+import { KitchenApi } from '../mediakitchen/src/model/KitchenApi';
 
 describe('api', () => {
 
@@ -86,7 +86,8 @@ describe('api', () => {
         // Double invoke
         let transport3 = await api1.connectWebRtcTransport({ id: transport1.id, dtlsParameters: { role: 'client', fingerprints: transport2.dtlsParameters.fingerprints } });
         let transport4 = await api2.connectWebRtcTransport({ id: transport2.id, dtlsParameters: { role: 'server', fingerprints: transport2.dtlsParameters.fingerprints } });
-        expect(transport3.id).toBe(transport4.id);
+        expect(transport3.id).toBe(transport1.id);
+        expect(transport4.id).toBe(transport2.id);
 
         // Close
         await api1.closeWebRtcTransport(transport1.id);

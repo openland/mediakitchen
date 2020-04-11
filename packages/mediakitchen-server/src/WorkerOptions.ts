@@ -1,5 +1,5 @@
 import * as mediasoup from 'mediasoup';
-import { ConnectionInfo } from 'mediakitchen';
+import { ConnectionInfo } from './ConnectionInfo';
 
 export interface WorkerOptions {
     connectionInfo: ConnectionInfo;

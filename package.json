@@ -1,15 +1,18 @@
 {
-  "name": "mediakitchen",
-  "version": "1.0.5",
-  "description": "Clustered Mediasoup server",
+  "name": "mediakitchen-root",
+  "version": "1.0.0",
+  "description": "Clustered Mediasoup server (Monorepo)",
   "main": "dist/index.js",
   "repository": "https://github.com/openland/mediakitchen.git",
   "author": "Steve Korshakov <steve@korshakov.com>",
   "license": "MIT",
+  "private": true,
   "scripts": {
     "clean": "lerna run clean",
     "build": "lerna run build",
-    "release": "lerna publish",
+    "release:client": "yarn build && cd packages/mediakitchen && yarn publish",
+    "release:common": "yarn build && cd packages/mediakitchen-common && yarn publish",
+    "release:server": "yarn build && cd packages/mediakitchen-server && yarn publish",
     "bootstrap": "lerna bootstrap --hoist",
     "postinstall": "yarn bootstrap"
   },
