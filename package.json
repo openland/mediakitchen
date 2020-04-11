@@ -14,6 +14,7 @@
     "release:common": "yarn build && cd packages/mediakitchen-common && yarn publish",
     "release:server": "yarn build && cd packages/mediakitchen-server && yarn publish",
     "bootstrap": "lerna bootstrap --hoist",
+    "start": "yarn build && node ./mediakitchen-server/dist/server.js",
     "postinstall": "yarn bootstrap"
   },
   "devDependencies": {
