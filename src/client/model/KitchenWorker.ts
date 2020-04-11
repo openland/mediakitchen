@@ -1,10 +1,11 @@
+import { RouterState, WebRtcTransportState, ProducerState, ConsumerState } from './../../wire/states';
 import { Worker } from './../Worker';
 import { RouterCreateCommand } from '../../wire/commands';
 import { SimpleMap } from '../../wire/common';
 import { KitchenApi } from './KitchenApi';
 import { KitchenRouter } from './KitchenRouter';
 import { KitchenCluster } from './KitchenCluster';
-import { delay } from '../../utils/delay';
+import { backoff } from '../../utils/backoff';
 
 export class KitchenWorker {
 
@@ -12,19 +13,30 @@ export class KitchenWorker {
     #appData: SimpleMap;
 
     #status: 'healthy' | 'unhealthy' | 'dead' = 'healthy';
-    #reportedDead = false;
+    #closedExternally: boolean = false;
+
     #routers = new Map<string, KitchenRouter>();
 
     #api: KitchenApi;
     #cluster: KitchenCluster;
     #facade: Worker;
 
-
     constructor(id: string, appData: SimpleMap, cluster: KitchenCluster) {
         this.#id = id;
         this.#appData = Object.freeze(appData);
         this.#cluster = cluster;
-        this.#api = new KitchenApi(id, cluster.client);
+        this.#api = new KitchenApi(id, cluster.connectionInfo);
+        this.#api.onEvent = (e) => {
+            if (e.type === 'state-router') {
+                this.#onRouterState(e.state);
+            } else if (e.type === 'state-webrtc-transport') {
+                this.#onWebRtcTransportState(e.routerId, e.state);
+            } else if (e.type === 'state-consumer') {
+                this.#onConsumerState(e.routerId, e.transportId, e.state);
+            } else if (e.type === 'state-producer') {
+                this.#onProducerState(e.routerId, e.transportId, e.state);
+            }
+        }
         this.#facade = new Worker(this);
     }
 
@@ -49,12 +61,20 @@ export class KitchenWorker {
     //
 
     async createRouter(args: RouterCreateCommand['args'], retryKey: string) {
+        if (this.#status === 'dead') {
+            throw Error('Worker already dead');
+        }
         let res = await this.#api.createRouter(args, retryKey);
+        if (this.#status === 'dead' as any /* WTF? */) {
+            throw Error('Worker already dead');
+        }
         let id = res.id;
         if (this.#routers.has(id)) {
-            return this.#routers.get(id)!;
+            let r = this.#routers.get(id)!;
+            r.applyState(res);
+            return r;
         } else {
-            let r = new KitchenRouter(res.id, args.appData || {}, this.#api);
+            let r = new KitchenRouter(res.id, res, this.#api);
             this.#routers.set(id, r);
             return r;
         }
@@ -70,8 +90,8 @@ export class KitchenWorker {
         }
         this.#status = 'dead';
         for (let r of this.#routers.values()) {
-            if (r.alive) {
-                r.onRouterDead();
+            if (!r.closed) {
+                r.onClosed();
             }
         }
         if (this.#cluster.onWorkerStatusChanged) {
@@ -79,20 +99,12 @@ export class KitchenWorker {
         }
 
         // Kill worker in background
-        (async () => {
-            while (true) {
-                try {
-                    if (this.#reportedDead) {
-                        return;
-                    }
-                    await this.#api.killWorker();
-                    return;
-                } catch (e) {
-                    // TODO: Backoff
-                    await delay(5000);
-                }
+        backoff(async () => {
+            if (this.#closedExternally) {
+                return;
             }
-        })();
+            await this.#api.killWorker();
+        })
     }
 
     //
@@ -120,15 +132,15 @@ export class KitchenWorker {
     }
 
     onDead() {
-        this.#reportedDead = true;
+        this.#closedExternally = true;
         if (this.#status === 'dead') {
             return;
         }
 
         this.#status = 'dead';
         for (let r of this.#routers.values()) {
-            if (r.alive) {
-                r.onRouterDead();
+            if (!r.closed) {
+                r.onClosed();
             }
         }
         if (this.#cluster.onWorkerStatusChanged) {
@@ -140,14 +152,62 @@ export class KitchenWorker {
     // Events
     //
 
-    onRouterClosed(id: string) {
+    #onRouterState = (state: RouterState) => {
         if (this.#status === 'dead') {
             return;
         }
 
-        let r = this.#routers.get(id);
-        if (r && r.alive) {
-            r.onClosed();
+        let r = this.#routers.get(state.id);
+        if (r) {
+            r.applyState(state);
+        }
+    }
+
+    #onWebRtcTransportState = (routerId: string, state: WebRtcTransportState) => {
+        if (this.#status === 'dead') {
+            return;
+        }
+
+        let r = this.#routers.get(routerId);
+        if (r) {
+            let tr = r.transports.get(state.id);
+            if (tr) {
+                tr.applyState(state);
+            }
+        }
+    }
+
+    #onProducerState = (routerId: string, transportId: string, state: ProducerState) => {
+        if (this.#status === 'dead') {
+            return;
+        }
+
+        let r = this.#routers.get(routerId);
+        if (r) {
+            let tr = r.transports.get(transportId);
+            if (tr) {
+                let p = tr.producers.get(state.id);
+                if (p) {
+                    p.applyState(state);
+                }
+            }
+        }
+    }
+
+    #onConsumerState = (routerId: string, transportId: string, state: ConsumerState) => {
+        if (this.#status === 'dead') {
+            return;
+        }
+
+        let r = this.#routers.get(routerId);
+        if (r) {
+            let tr = r.transports.get(transportId);
+            if (tr) {
+                let c = tr.consumers.get(state.id);
+                if (c) {
+                    c.applyState(state);
+                }
+            }
         }
     }
 }

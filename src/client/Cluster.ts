@@ -1,6 +1,7 @@
-import * as nats from 'ts-nats';
+import { ConnectionInfo } from './ConnectionInfo';
 import { Worker } from './Worker';
 import { KitchenCluster } from "./model/KitchenCluster";
+import { delay } from '../utils/delay';
 
 export class Cluster {
     #cluster: KitchenCluster;
@@ -16,8 +17,8 @@ export class Cluster {
         }
     }
 
-    get alive() {
-        return this.#cluster
+    get closed() {
+        return !this.#cluster.alive;
     }
 
     get workers() {
@@ -29,14 +30,17 @@ export class Cluster {
     }
 }
 
-export async function connectToCluster(client: nats.Client) {
-    let res = new KitchenCluster(client);
-    await res.init();
-    try {
-        await res.awaitWorkersReporting();
-        return new Cluster(res);
-    } catch (e) {
-        res.close();
-        throw e;
-    }
+export async function connectToCluster(connectionInfo: ConnectionInfo) {
+
+    // Create cluter connection
+    let res = new KitchenCluster(connectionInfo);
+
+    // Connect to cluster
+    await res.connect();
+
+    // Wait for cluster map population
+    await delay(5000);
+
+    // Wrap cluter
+    return new Cluster(res);
 }

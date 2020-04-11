@@ -1,25 +1,28 @@
+import { ConnectionInfo } from './../ConnectionInfo';
+import { reportCodec } from './../../wire/events';
 import * as nats from 'ts-nats';
 import { SimpleMap } from '../../wire/common';
-import { eventCodec, Event } from '../../wire/events';
 import { KitchenWorker } from './KitchenWorker';
 
 export class KitchenCluster {
-    client: nats.Client
+    readonly connectionInfo: ConnectionInfo;
+
+    #client: nats.Client
+    #rootTopic: string;
     #subscription!: nats.Subscription;
     #alive: boolean = true;
     #workers = new Map<string, { worker: KitchenWorker, lastSeen: number, timer: any }>();
+
     onWorkerStatusChanged?: (worker: KitchenWorker) => void;
 
-    constructor(client: nats.Client) {
-        this.client = client;
+    constructor(connectionInfo: ConnectionInfo) {
+        this.#client = connectionInfo.nc;
+        this.#rootTopic = connectionInfo.rootTopic || 'mediakitchen';
+        this.connectionInfo = connectionInfo;
     }
 
     get alive() {
         return this.#alive;
-    }
-
-    async awaitWorkersReporting() {
-        await new Promise((r) => setTimeout(r, 5000));
     }
 
     getWorkers() {
@@ -40,21 +43,22 @@ export class KitchenCluster {
         }
     }
 
-    #onEvent = (event: Event) => {
-        if (event.type === 'report') {
-            if (event.state === 'alive') {
-                this.#onWorkerAlive(event.workerId, event.time, event.appData);
-            } else if (event.state === 'dead') {
-                this.#onWorkerDead(event.workerId);
-            }
-        } else if (event.type === 'router-closed') {
-            this.#onRouterClosed(event.workerId, event.routerId);
-        }
-    }
-
     //
     // Worker Lifecycle
     //
+
+    connect = async () => {
+        this.#subscription = await this.#client.subscribe(this.#rootTopic + '.report', (err, msg) => {
+            let event = msg.data;
+            if (reportCodec.is(event)) {
+                if (event.state === 'alive') {
+                    this.#onWorkerAlive(event.workerId, event.time, event.appData);
+                } else if (event.state === 'dead') {
+                    this.#onWorkerDead(event.workerId);
+                }
+            }
+        });
+    }
 
     #onWorkerAlive = (id: string, time: number, appData: SimpleMap) => {
         if (!this.#workers.has(id)) {
@@ -95,28 +99,5 @@ export class KitchenCluster {
             return;
         }
         ex.worker.onReportTimeout();
-    }
-
-    //
-    // Events
-    //
-
-    #onRouterClosed = (workerId: string, routerId: string) => {
-        if (this.#workers.has(workerId)) {
-            this.#workers.get(workerId)!.worker.onRouterClosed(routerId);
-        }
-    }
-
-    //
-    // Private
-    //
-
-    init = async () => {
-        this.#subscription = await this.client.subscribe('mediakitchen/report', (err, msg) => {
-            let event = msg.data;
-            if (eventCodec.is(event)) {
-                this.#onEvent(event);
-            }
-        });
     }
 }

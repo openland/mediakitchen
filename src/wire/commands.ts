@@ -1,14 +1,7 @@
 import * as t from 'io-ts';
-import { simpleMapCodec, dtlsParametersCodec, iceParametersCodec, rtpParametersCodec, rtpCodecCapabilityCodec, rtpCapabilitiesCodec } from './common';
-
-//
-// Common Response
-//
-
-const idResponseCodec = t.type({
-    id: t.string
-});
-export type IdResponse = t.TypeOf<typeof idResponseCodec>;
+import { eventsCodec } from './events';
+import { simpleMapCodec, dtlsParametersCodec, rtpParametersCodec, rtpCodecCapabilityCodec, rtpCapabilitiesCodec } from './common';
+import { routerStateCodec, RouterState, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec } from './states';
 
 //
 // Kill Worker
@@ -17,6 +10,38 @@ export type IdResponse = t.TypeOf<typeof idResponseCodec>;
 const killCommandCodec = t.type({
     type: t.literal('worker-kill')
 });
+
+//
+// Get Events
+//
+
+const getEventsCommandCodec = t.type({
+    type: t.literal('worker-events'),
+    batchSize: t.number,
+    seq: t.number
+});
+export type GetEventsCommand = t.TypeOf<typeof getEventsCommandCodec>;
+
+export const getEventsResponseCodec = t.type({
+    hasMore: t.boolean,
+    seq: t.number,
+    events: t.array(eventsCodec)
+});
+export type GetEventsResponse = t.TypeOf<typeof getEventsResponseCodec>;
+
+//
+// Get State
+//
+
+const getStateCommandCodec = t.type({
+    type: t.literal('worker-state')
+});
+export type GetStateCommand = t.TypeOf<typeof getStateCommandCodec>;
+
+export const getStateResponseCodec = t.type({
+    seq: t.number
+});
+export type GetStateResponse = t.TypeOf<typeof getStateResponseCodec>;
 
 //
 // Create Router Command
@@ -32,8 +57,8 @@ const routerCreateCommandCodec = t.type({
 });
 export type RouterCreateCommand = t.TypeOf<typeof routerCreateCommandCodec>;
 
-export const routerCreateResponseCodec = idResponseCodec;
-export type RouterCreateResponse = IdResponse;
+export const routerCreateResponseCodec = routerStateCodec;
+export type RouterCreateResponse = RouterState;
 
 //
 // Close Router Command
@@ -47,8 +72,8 @@ const routerCloseCommandCodec = t.type({
 });
 export type RouterCloseCommand = t.TypeOf<typeof routerCloseCommandCodec>;
 
-export const routerCloseResponseCodec = idResponseCodec;
-export type RouterCloseResponse = IdResponse;
+export const routerCloseResponseCodec = routerStateCodec;
+export type RouterCloseResponse = RouterState;
 
 //
 // Create WebRTC Transport Command
@@ -71,13 +96,7 @@ const webRtcTransportCreateCommandCodec = t.type({
 });
 export type WebRTCTransportCreateCommand = t.TypeOf<typeof webRtcTransportCreateCommandCodec>;
 
-export const webRTCTransportCreateResponseCodec = t.type({
-    routerId: t.string,
-    transportId: t.string,
-    appData: simpleMapCodec,
-    dtlsParameters: dtlsParametersCodec,
-    iceParameters: iceParametersCodec
-});
+export const webRTCTransportCreateResponseCodec = webRtcTransportStateCodec;
 export type WebRTCTransportCreateResponse = t.TypeOf<typeof webRTCTransportCreateResponseCodec>;
 
 //
@@ -92,8 +111,8 @@ const webRtcTransportCloseCommandCodec = t.type({
 });
 export type WebRTCTransportCloseCommand = t.TypeOf<typeof webRtcTransportCloseCommandCodec>;
 
-export const webRtcTransportCloseResponseCodec = idResponseCodec;
-export type WebRTCTransportCloseResponse = IdResponse;
+export const webRtcTransportCloseResponseCodec = webRtcTransportStateCodec;
+export type WebRTCTransportCloseResponse = t.TypeOf<typeof webRtcTransportStateCodec>;
 
 //
 // Connect WebRTC Transport Command
@@ -108,8 +127,8 @@ const webRtcTransportConnectCommandCodec = t.type({
 });
 export type WebRTCTransportConnectCommand = t.TypeOf<typeof webRtcTransportConnectCommandCodec>;
 
-export const webRtcTransportConnectResponseCodec = idResponseCodec;
-export type WebRTCTransportConnectResponse = IdResponse;
+export const webRtcTransportConnectResponseCodec = webRtcTransportStateCodec;
+export type WebRTCTransportConnectResponse = t.TypeOf<typeof webRtcTransportConnectResponseCodec>;
 
 //
 // Produce Create Command
@@ -130,13 +149,36 @@ const produceCommandCodec = t.type({
 });
 export type ProduceCommand = t.TypeOf<typeof produceCommandCodec>;
 
-export const produceResponseCodec = t.type({
-    id: t.string,
-    paused: t.boolean,
-    type: t.union([t.literal('simple'), t.literal('simulcast'), t.literal('svc')]),
-    rtpParameters: rtpParametersCodec
-});
+export const produceResponseCodec = producerStateCodec;
 export type ProduceResponse = t.TypeOf<typeof produceResponseCodec>;
+
+//
+// Produce Pause Command
+//
+
+const producePauseCommandCodec = t.type({
+    type: t.literal('produce-pause'),
+    args: t.type({
+        id: t.string
+    })
+});
+export type ProducePauseCommand = t.TypeOf<typeof producePauseCommandCodec>;
+export const producePauseResponseCodec = producerStateCodec;
+export type ProducePauseResponse = t.TypeOf<typeof producePauseResponseCodec>;
+
+//
+// Produce Resume Command
+//
+
+const produceResumeCommandCodec = t.type({
+    type: t.literal('produce-resume'),
+    args: t.type({
+        id: t.string
+    })
+});
+export type ProduceResumeCommand = t.TypeOf<typeof produceResumeCommandCodec>;
+export const produceResumeResponseCodec = producerStateCodec;
+export type ProduceResumeResponse = t.TypeOf<typeof produceResumeResponseCodec>;
 
 //
 // Produce Close Commnand
@@ -150,8 +192,8 @@ const produceCloseCommandCodec = t.type({
 });
 export type ProduceCloseCommand = t.TypeOf<typeof produceCloseCommandCodec>;
 
-export const produceCloseResponseCodec = idResponseCodec;
-export type ProduceCloseResponse = IdResponse;
+export const produceCloseResponseCodec = producerStateCodec;
+export type ProduceCloseResponse = t.TypeOf<typeof producerStateCodec>;
 
 //
 // Consume Command
@@ -174,13 +216,53 @@ const consumeCommandCodec = t.type({
 export type ConsumeCommand = t.TypeOf<typeof consumeCommandCodec>;
 export type ConsumeCommandInput = t.InputOf<typeof consumeCommandCodec>;
 
-export const consumeResponseCodec = t.type({
-    id: t.string,
-    paused: t.boolean,
-    type: t.union([t.literal('simple'), t.literal('simulcast'), t.literal('svc'), t.literal('pipe')]),
-    rtpParameters: rtpParametersCodec
-});
+export const consumeResponseCodec = consumerStateCodec;
 export type ConsumeResponse = t.TypeOf<typeof consumeResponseCodec>;
+
+//
+// Consume Pause
+//
+
+const consumePauseCommandCodec = t.type({
+    type: t.literal('consume-pause'),
+    args: t.type({
+        id: t.string
+    })
+});
+export type ConsumePauseCommand = t.TypeOf<typeof consumePauseCommandCodec>;
+
+export const consumePauseResponseCodec = consumerStateCodec;
+export type ConsumePauseResponse = t.TypeOf<typeof consumePauseResponseCodec>;
+
+//
+// Consume Resume
+//
+
+const consumeResumeCommandCodec = t.type({
+    type: t.literal('consume-resume'),
+    args: t.type({
+        id: t.string
+    })
+});
+export type ConsumeResumeCommand = t.TypeOf<typeof consumeResumeCommandCodec>;
+
+export const consumeResumeResponseCodec = consumerStateCodec;
+export type ConsumeResumeResponse = t.TypeOf<typeof consumeResumeResponseCodec>;
+
+//
+// Consume Close
+//
+
+const consumeCloseCommandCodec = t.type({
+    type: t.literal('consume-close'),
+    args: t.type({
+        id: t.string
+    })
+});
+export type ConsumeCloseCommand = t.TypeOf<typeof consumeCloseCommandCodec>;
+
+export const consumeCloseResponseCodec = consumerStateCodec;
+export type ConsumeCloseResponse = t.TypeOf<typeof consumeCloseResponseCodec>;
 
 //
 // All Commands
@@ -188,6 +270,8 @@ export type ConsumeResponse = t.TypeOf<typeof consumeResponseCodec>;
 
 export const commandsCodec = t.union([
     killCommandCodec,
+    getEventsCommandCodec,
+    getStateCommandCodec,
 
     routerCreateCommandCodec,
     routerCloseCommandCodec,
@@ -197,9 +281,14 @@ export const commandsCodec = t.union([
     webRtcTransportCloseCommandCodec,
 
     produceCommandCodec,
+    producePauseCommandCodec,
+    produceResumeCommandCodec,
     produceCloseCommandCodec,
 
     consumeCommandCodec,
+    consumePauseCommandCodec,
+    consumeResumeCommandCodec,
+    consumeCloseCommandCodec
 ]);
 
 export type Commands = t.TypeOf<typeof commandsCodec>;

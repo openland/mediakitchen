@@ -6,6 +6,7 @@ export class Worker {
 
     constructor(worker: KitchenWorker) {
         this.#worker = worker;
+        Object.freeze(this);
     }
 
     get id() {

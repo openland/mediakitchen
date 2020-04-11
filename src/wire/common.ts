@@ -17,6 +17,9 @@ export const dtlsParametersCodec = t.intersection([t.type({
 })]);
 export type DtlsParameters = t.TypeOf<typeof dtlsParametersCodec>;
 
+export const dtlsStateCodec = t.union([t.literal('new'), t.literal('connecting'), t.literal('connected'), t.literal('failed'), t.literal('closed')]);
+export type DtlsState = t.TypeOf<typeof dtlsStateCodec>;
+
 // ICE
 
 export const iceParametersCodec = t.intersection([t.type({
@@ -27,6 +30,22 @@ export const iceParametersCodec = t.intersection([t.type({
 })]);
 
 export type IceParameters = t.TypeOf<typeof iceParametersCodec>;
+
+export const iceCandidate = t.intersection([t.type({
+    foundation: t.string,
+    priority: t.number,
+    ip: t.string,
+    protocol: t.union([t.literal('udp'), t.literal('tcp')]),
+    port: t.number,
+    type: t.literal('host')
+}), t.partial({
+    tcpType: t.literal('passive')
+})]);
+
+export type IceCandidate = t.TypeOf<typeof iceCandidate>;
+
+export const iceStateCodec = t.union([t.literal('new'), t.literal('connected'), t.literal('completed'), t.literal('disconnected'), t.literal('closed')])
+export type IceState = t.TypeOf<typeof iceStateCodec>;
 
 // RTP Feedback
 

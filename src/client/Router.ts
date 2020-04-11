@@ -1,9 +1,11 @@
+import { WebRTCTransportCreateCommand } from './../wire/commands';
 import { KitchenRouter } from './model/KitchenRouter';
 export class Router {
     #router: KitchenRouter
 
     constructor(router: KitchenRouter) {
         this.#router = router;
+        Object.freeze(this);
     }
 
     get id() {
@@ -14,11 +16,15 @@ export class Router {
         return this.#router.appData;
     }
 
-    get alive() {
-        return this.#router.alive;
+    get closed() {
+        return this.#router.closed;
     }
 
-    async close() {
-        return this.#router.close();
+    async createWebRTCTransport(args: WebRTCTransportCreateCommand['args'], retryKey: string) {
+        return (await this.#router.createWebRTCTransport(args, retryKey)).facade;
+    }
+
+    close() {
+        this.#router.close();
     }
 }
