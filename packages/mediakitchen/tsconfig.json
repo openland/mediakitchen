@@ -1,6 +1,6 @@
 {
     "extends": "../../tsconfig.json",
     "include": [
-        "src/**/*", "../mediakitchen-common/src/utils"
+        "src/**/*"
     ]
 }

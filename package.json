@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "clean": "lerna run clean",
-    "build": "lerna run build",
+    "build": "lerna run clean && tsc -p ./packages/mediakitchen-common/tsconfig.build.json && tsc -p ./packages/mediakitchen/tsconfig.build.json && tsc -p ./packages/mediakitchen-server/tsconfig.build.json",
     "release:client": "yarn build && cd packages/mediakitchen && yarn publish",
     "release:common": "yarn build && cd packages/mediakitchen-common && yarn publish",
     "release:server": "yarn build && cd packages/mediakitchen-server && yarn publish",
