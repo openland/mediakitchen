@@ -34,7 +34,9 @@ import { randomKey } from './utils/randomKey';
         // Resolve App Data
         const appData: SimpleMap = {};
         const processId = randomKey();
-        appData[processId] = processId;
+        appData['process'] = processId;
+        appData['topic'] = rootTopic;
+        appData['ip'] = announce;
 
         for (let k of Object.keys(process.env)) {
             if (k.startsWith('MEDIAKITCHEN_')) {
@@ -43,6 +45,9 @@ import { randomKey } from './utils/randomKey';
                 appData[converted] = process.env[k]!
             }
         }
+
+        console.log('App Data:');
+        console.log(appData);
 
         // Connect to NATS
         console.log('Connecting to NATS...');
