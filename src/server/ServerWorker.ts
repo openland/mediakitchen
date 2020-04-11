@@ -79,6 +79,11 @@ interface ConsumerHolder {
 }
 
 export class ServerWorker {
+
+    // Callbacks
+    onClosed?: () => void;
+
+    // Config
     #id: string
     #worker: mediasoup.types.Worker;
     #nc: nats.Client;
@@ -118,6 +123,10 @@ export class ServerWorker {
 
     get id() {
         return this.#id;
+    }
+
+    get closed() {
+        return !this.#alive;
     }
 
     #handleCommand = async (command: Commands, repeatKey: string) => {
@@ -799,6 +808,10 @@ export class ServerWorker {
             this.#worker.close();
 
             this.#logger('Closed');
+
+            if (this.onClosed) {
+                this.onClosed();
+            }
         } else {
             // Just ignore
         }
