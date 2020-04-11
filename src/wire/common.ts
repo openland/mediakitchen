@@ -13,7 +13,7 @@ export type DtlsRole = t.TypeOf<typeof dtlsRoleCodec>;
 export const dtlsParametersCodec = t.intersection([t.type({
     fingerprints: t.array(t.type({ algorithm: t.string, value: t.string }))
 }), t.partial({
-    dtlsRole: dtlsRoleCodec
+    role: dtlsRoleCodec
 })]);
 export type DtlsParameters = t.TypeOf<typeof dtlsParametersCodec>;
 

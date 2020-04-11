@@ -80,12 +80,12 @@ describe('api', () => {
 
         let transport1 = (await api1.createWebRtcTransport(router1, {}, 'transport1'));
         let transport2 = (await api2.createWebRtcTransport(router2, {}, 'transport2'));
-        await api1.connectWebRtcTransport({ id: transport1.id, dtlsParameters: { dtlsRole: 'client', fingerprints: transport2.dtlsParameters.fingerprints } });
-        await api2.connectWebRtcTransport({ id: transport2.id, dtlsParameters: { dtlsRole: 'server', fingerprints: transport2.dtlsParameters.fingerprints } });
+        await api1.connectWebRtcTransport({ id: transport1.id, dtlsParameters: { role: 'client', fingerprints: transport2.dtlsParameters.fingerprints } });
+        await api2.connectWebRtcTransport({ id: transport2.id, dtlsParameters: { role: 'server', fingerprints: transport2.dtlsParameters.fingerprints } });
 
         // Double invoke
-        let transport3 = await api1.connectWebRtcTransport({ id: transport1.id, dtlsParameters: { dtlsRole: 'client', fingerprints: transport2.dtlsParameters.fingerprints } });
-        let transport4 = await api2.connectWebRtcTransport({ id: transport2.id, dtlsParameters: { dtlsRole: 'server', fingerprints: transport2.dtlsParameters.fingerprints } });
+        let transport3 = await api1.connectWebRtcTransport({ id: transport1.id, dtlsParameters: { role: 'client', fingerprints: transport2.dtlsParameters.fingerprints } });
+        let transport4 = await api2.connectWebRtcTransport({ id: transport2.id, dtlsParameters: { role: 'server', fingerprints: transport2.dtlsParameters.fingerprints } });
         expect(transport3.id).toBe(transport4.id);
 
         // Close

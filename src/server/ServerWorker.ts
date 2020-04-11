@@ -398,7 +398,7 @@ export class ServerWorker {
             dtlsState: holder.transport ? holder.transport.dtlsState : 'closed',
             appData: holder.appData,
             dtlsParameters: {
-                dtlsRole: holder.dtlsParameters.role,
+                role: holder.dtlsParameters.role,
                 fingerprints: holder.dtlsParameters.fingerprints.map((v) => ({ algorithm: v.algorithm, value: v.value }))
             },
             iceParameters: {
