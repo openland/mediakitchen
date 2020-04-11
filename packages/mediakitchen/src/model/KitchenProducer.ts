@@ -1,9 +1,8 @@
-import { Producer } from './../Producer';
-import { RtpParameters } from './../../wire/common';
-import { ProducerState } from './../../wire/states';
+import {
+    RtpParameters, ProducerState, SimpleMap, backoff
+} from 'mediakitchen-common';
+import { Producer } from '../Producer';
 import { KitchenApi } from './KitchenApi';
-import { SimpleMap } from "../../wire/common";
-import { backoff } from '../../utils/backoff';
 
 export class KitchenProducer {
     readonly id: string;

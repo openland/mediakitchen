@@ -1,4 +1,4 @@
-import { RouterCreateCommand } from './../wire/commands';
+import { RouterCreateCommand } from 'mediakitchen-common';
 import { KitchenWorker } from './model/KitchenWorker';
 
 export class Worker {

@@ -1,22 +1,20 @@
 {
+    "extends": "./tsconfig.build.json",
     "compilerOptions": {
-        "sourceMap": true,
-        "target": "es6",
-        "module": "CommonJS",
-        "strict": true,
-        "outDir": "./dist",
-        "lib": [
-            "es2016",
-            "DOM",
-            "ES2018.AsyncIterable"
-        ],
-        "declaration": true,
-        "moduleResolution": "node",
-        "allowSyntheticDefaultImports": true,
-        "esModuleInterop": true,
-        "resolveJsonModule": true
-    },
-    "include": [
-        "./src"
-    ]
+        "baseUrl": ".",
+        "paths": {
+            "mediakitchen": [
+                "packages/mediakitchen/src"
+            ],
+            "mediakitchen-server": [
+                "packages/mediakitchen-server/src"
+            ],
+            "mediakitchen-common": [
+                "packages/mediakitchen-common/src"
+            ],
+            "tests": [
+                "packages/tests"
+            ]
+        }
+    }
 }

@@ -1,4 +1,4 @@
-import { WebRTCTransportCreateCommand } from './../wire/commands';
+import { WebRTCTransportCreateCommand } from 'mediakitchen-common';
 import { KitchenRouter } from './model/KitchenRouter';
 export class Router {
     #router: KitchenRouter

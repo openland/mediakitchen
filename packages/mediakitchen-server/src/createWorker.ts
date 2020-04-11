@@ -1,7 +1,7 @@
-import { WorkerOptions } from './WorkerOptions';
 import debug from 'debug';
 import * as mediasoup from 'mediasoup';
-import { randomKey } from "../utils/randomKey";
+import { randomKey } from 'mediakitchen-common';
+import { WorkerOptions } from './WorkerOptions';
 import { ServerWorker } from './ServerWorker';
 
 export async function createWorker(options: WorkerOptions) {

@@ -1,7 +1,7 @@
+import { delay } from 'mediakitchen-common';
 import { ConnectionInfo } from './ConnectionInfo';
 import { Worker } from './Worker';
 import { KitchenCluster } from "./model/KitchenCluster";
-import { delay } from '../utils/delay';
 
 export class Cluster {
     #cluster: KitchenCluster;

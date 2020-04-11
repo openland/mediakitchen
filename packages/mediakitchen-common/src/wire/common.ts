@@ -31,7 +31,7 @@ export const iceParametersCodec = t.intersection([t.type({
 
 export type IceParameters = t.TypeOf<typeof iceParametersCodec>;
 
-export const iceCandidate = t.intersection([t.type({
+export const iceCandidateCodec = t.intersection([t.type({
     foundation: t.string,
     priority: t.number,
     ip: t.string,
@@ -42,7 +42,7 @@ export const iceCandidate = t.intersection([t.type({
     tcpType: t.literal('passive')
 })]);
 
-export type IceCandidate = t.TypeOf<typeof iceCandidate>;
+export type IceCandidate = t.TypeOf<typeof iceCandidateCodec>;
 
 export const iceStateCodec = t.union([t.literal('new'), t.literal('connected'), t.literal('completed'), t.literal('disconnected'), t.literal('closed')])
 export type IceState = t.TypeOf<typeof iceStateCodec>;

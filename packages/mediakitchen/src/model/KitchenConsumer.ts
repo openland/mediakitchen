@@ -1,9 +1,6 @@
-import { Consumer } from './../Consumer';
-import { RtpParameters } from './../../wire/common';
+import { RtpParameters, SimpleMap, ConsumerState, backoff } from 'mediakitchen-common';
+import { Consumer } from '../Consumer';
 import { KitchenApi } from './KitchenApi';
-import { SimpleMap } from "../../wire/common";
-import { ConsumerState } from '../../wire/states';
-import { backoff } from '../../utils/backoff';
 
 export class KitchenConsumer {
     readonly id: string;

@@ -1,7 +1,13 @@
+import * as nats from 'ts-nats';
+import * as mediasoup from 'mediasoup';
+import debug from 'debug';
+import { isLeft } from 'fp-ts/lib/Either';
 import { WorkerOptions } from './WorkerOptions';
-import { RtpParameters } from '../wire/common';
-import { RouterState, WebRtcTransportState, ProducerState, ConsumerState } from '../wire/states';
 import {
+    RouterState,
+    WebRtcTransportState,
+    ProducerState,
+    ConsumerState,
     commandBoxCodec,
     Commands,
     RouterCreateResponse,
@@ -30,17 +36,16 @@ import {
     ConsumePauseResponse,
     ConsumeResumeCommand,
     ConsumeResumeResponse,
-    GetEventsResponse
-} from '../wire/commands';
-import { Event, Report, eventsCodec, EventBox } from '../wire/events';
-import * as nats from 'ts-nats';
-import * as mediasoup from 'mediasoup';
-import { randomKey } from '../utils/randomKey';
-import debug from 'debug';
-import { isLeft } from 'fp-ts/lib/Either';
-import { now } from '../utils/time';
-import { TransportListenIp } from 'mediasoup/lib/types';
-import { SimpleMap } from '../wire/common';
+    GetEventsResponse,
+    Event,
+    Report,
+    eventsCodec,
+    EventBox,
+    RtpParameters,
+    SimpleMap,
+    randomKey,
+    now
+} from 'mediakitchen-common';
 
 interface RouterHolder {
     appData: SimpleMap;
@@ -88,7 +93,7 @@ export class ServerWorker {
     #worker: mediasoup.types.Worker;
     #nc: nats.Client;
     #logger: debug.Debugger;
-    #listenIps: TransportListenIp[] | string[];
+    #listenIps: { ip: string, announceIp?: string }[] | string[];
     #rootTopic: string;
 
     // State

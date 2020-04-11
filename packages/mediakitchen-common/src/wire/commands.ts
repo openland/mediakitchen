@@ -214,7 +214,6 @@ const consumeCommandCodec = t.type({
     })
 });
 export type ConsumeCommand = t.TypeOf<typeof consumeCommandCodec>;
-export type ConsumeCommandInput = t.InputOf<typeof consumeCommandCodec>;
 
 export const consumeResponseCodec = consumerStateCodec;
 export type ConsumeResponse = t.TypeOf<typeof consumeResponseCodec>;

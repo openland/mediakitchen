@@ -1,7 +1,6 @@
-import { ConnectionInfo } from './../ConnectionInfo';
-import { reportCodec } from './../../wire/events';
 import * as nats from 'ts-nats';
-import { SimpleMap } from '../../wire/common';
+import { reportCodec, SimpleMap } from 'mediakitchen-common';
+import { ConnectionInfo } from './../ConnectionInfo';
 import { KitchenWorker } from './KitchenWorker';
 
 export class KitchenCluster {

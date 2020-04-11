@@ -1,4 +1,4 @@
-import { ConnectionInfo } from './../ConnectionInfo';
+import { ConnectionInfo } from '../ConnectionInfo';
 import {
     Commands,
     CommandBox,
@@ -21,12 +21,13 @@ import {
     consumePauseResponseCodec,
     consumeResumeResponseCodec,
     getStateResponseCodec,
-    getEventsResponseCodec
-} from './../../wire/commands';
+    getEventsResponseCodec,
+    eventBoxCodec, 
+    Event,
+    backoff
+} from 'mediakitchen-common';
 import * as nats from 'ts-nats';
 import * as t from 'io-ts';
-import { eventBoxCodec, Event } from '../../wire/events';
-import { backoff } from '../../utils/backoff';
 
 export class KitchenApi {
     #id: string;

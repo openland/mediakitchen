@@ -1,12 +1,19 @@
-import { IceCandidate, DtlsState, IceState } from './../../wire/common';
-import { WebRtcTransportState } from './../../wire/states';
-import { WebRtcTransport } from './../WebRtcTransport';
+import {
+    IceCandidate,
+    DtlsState,
+    IceState,
+    WebRtcTransportState,
+    ProduceCommand,
+    ConsumeCommand,
+    SimpleMap,
+    DtlsParameters,
+    IceParameters,
+    backoff
+} from 'mediakitchen-common';
+import { WebRtcTransport } from '../WebRtcTransport';
 import { KitchenConsumer } from './KitchenConsumer';
 import { KitchenProducer } from './KitchenProducer';
-import { ProduceCommand, ConsumeCommand } from '../../wire/commands';
-import { SimpleMap, DtlsParameters, IceParameters } from '../../wire/common';
 import { KitchenApi } from './KitchenApi';
-import { backoff } from '../../utils/backoff';
 
 export class KitchenWebRtcTransport {
     id: string;

@@ -1,5 +1,5 @@
-import { ProduceCommand, ConsumeCommand } from './../wire/commands';
-import { DtlsParameters } from './../wire/common';
+import { ProduceCommand, ConsumeCommand } from 'mediakitchen-common';
+import { DtlsParameters } from 'mediakitchen-common';
 import { KitchenWebRtcTransport } from './model/KitchentWebRtcTransport';
 
 export class WebRtcTransport {

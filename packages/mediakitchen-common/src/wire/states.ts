@@ -1,5 +1,13 @@
 import * as t from 'io-ts';
-import { simpleMapCodec, dtlsParametersCodec, iceParametersCodec, iceCandidate, iceStateCodec, dtlsStateCodec, rtpParametersCodec } from './common';
+import {
+    simpleMapCodec,
+    dtlsParametersCodec,
+    iceParametersCodec,
+    iceCandidateCodec,
+    iceStateCodec,
+    dtlsStateCodec,
+    rtpParametersCodec
+} from './common';
 
 export const routerStateCodec = t.type({
     id: t.string,
@@ -17,7 +25,7 @@ export const webRtcTransportStateCodec = t.type({
     dtlsParameters: dtlsParametersCodec,
     dtlsState: dtlsStateCodec,
     iceParameters: iceParametersCodec,
-    iceCandidates: t.array(iceCandidate),
+    iceCandidates: t.array(iceCandidateCodec),
     iceState: iceStateCodec,
     time: t.number
 });
