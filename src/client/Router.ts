@@ -20,7 +20,7 @@ export class Router {
         return this.#router.closed;
     }
 
-    async createWebRTCTransport(args: WebRTCTransportCreateCommand['args'], retryKey: string) {
+    async createWebRtcTransport(args: WebRTCTransportCreateCommand['args'], retryKey: string) {
         return (await this.#router.createWebRTCTransport(args, retryKey)).facade;
     }
 

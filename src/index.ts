@@ -20,3 +20,6 @@ export { ServerWorker } from './server/ServerWorker';
 export { connectToCluster, Cluster } from './client/Cluster';
 export { Worker } from './client/Worker';
 export { Router } from './client/Router';
+export { Producer } from './client/Producer';
+export { Consumer } from './client/Consumer';
+export { WebRtcTransport } from './client/WebRtcTransport';
