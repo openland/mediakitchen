@@ -35,6 +35,9 @@ import { createWorker } from "./createWorker";
         // Resolve Root Topic
         let rootTopic = process.env.MEDIAKITCHEN_TOPIC || 'mediakitchen';
 
+        // NATS
+        let natsHost = process.env.MEDIAKITCHEN_NATS ? process.env.MEDIAKITCHEN_NATS.split(',').map((v) => v.trim()) : [];
+
         // Resolve App Data
         const appData: SimpleMap = {};
         const processId = randomKey();
@@ -55,7 +58,7 @@ import { createWorker } from "./createWorker";
 
         // Connect to NATS
         console.log('Connecting to NATS...');
-        const nc = await connect({ payload: Payload.JSON });
+        const nc = await connect({ payload: Payload.JSON, servers: natsHost.length > 0 ? natsHost : undefined });
 
         // Spawn Workers
         console.log('Spawing workers....');
