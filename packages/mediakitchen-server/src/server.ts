@@ -28,6 +28,10 @@ import { createWorker } from "./createWorker";
             announce = ip;
         }
 
+        // Resolve Ports
+        let maxPort = process.env.MEDIAKITCHEN_MAX_PORT ? parseInt(process.env.MEDIAKITCHEN_MAX_PORT, 10) : 59999;
+        let minPort = process.env.MEDIAKITCHEN_MIN_PORT ? parseInt(process.env.MEDIAKITCHEN_MIN_PORT, 10) : 59999;
+
         // Resolve Root Topic
         let rootTopic = process.env.MEDIAKITCHEN_TOPIC || 'mediakitchen';
 
@@ -60,7 +64,12 @@ import { createWorker } from "./createWorker";
         async function spawnWorker(index: number) {
             let w = await createWorker({
                 listenIps: [{ ip: listenIp, announcedIp: announce }],
-                connectionInfo: { nc, rootTopic }
+                connectionInfo: { nc, rootTopic },
+                settings: {
+                    rtcMaxPort: maxPort,
+                    rtcMinPort: minPort,
+                    appData: appData
+                }
             });
             w.onClosed = () => {
                 if (closing) {
