@@ -1,6 +1,6 @@
 {
     "name": "mediakitchen-docker",
     "dependencies": {
-        "mediakitchen-server": "1.1.1"
+        "mediakitchen-server": "1.2.0"
     }
 }
