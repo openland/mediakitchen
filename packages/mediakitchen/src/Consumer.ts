@@ -43,7 +43,7 @@ export class Consumer {
         await this.#consumer.resume();
     }
 
-    close() {
-        this.#consumer.close();
+    async close() {
+        await this.#consumer.close();
     }
 }

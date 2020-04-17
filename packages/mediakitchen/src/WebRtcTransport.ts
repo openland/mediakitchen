@@ -46,7 +46,7 @@ export class WebRtcTransport {
         return (await this.#transport.consume(producerId, args, retryKey)).facade;
     }
 
-    close() {
-        this.#transport.close();
+    async close() {
+        await this.#transport.close();
     }
 }

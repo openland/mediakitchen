@@ -43,7 +43,7 @@ export class Producer {
         return this.#producer.resume();
     }
 
-    close() {
-        this.#producer.close();
+    async close() {
+        await this.#producer.close();
     }
 }

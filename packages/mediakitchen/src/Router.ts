@@ -24,7 +24,7 @@ export class Router {
         return (await this.#router.createWebRTCTransport(args, retryKey)).facade;
     }
 
-    close() {
-        this.#router.close();
+    async close() {
+        await this.#router.close();
     }
 }
