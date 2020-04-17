@@ -53,13 +53,13 @@ export class KitchenRouter {
         }
     }
 
-    close() {
+    async close() {
         if (!this.closed) {
             this.closed = true;
             for (let t of this.transports.values()) {
                 t.onClosed();
             }
-            backoff(async () => {
+            await backoff(async () => {
                 if (this.closedExternally) {
                     return;
                 }

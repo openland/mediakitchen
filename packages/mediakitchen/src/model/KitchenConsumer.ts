@@ -33,11 +33,11 @@ export class KitchenConsumer {
         this.facade = new Consumer(this);
     }
 
-    close() {
+    async close() {
         if (!this.closed) {
             this.closed = true;
             this.paused = true;
-            backoff(async () => {
+            await backoff(async () => {
                 if (this.#closedExternally) {
                     return;
                 }

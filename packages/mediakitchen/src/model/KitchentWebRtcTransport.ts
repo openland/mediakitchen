@@ -107,7 +107,7 @@ export class KitchenWebRtcTransport {
         }
     }
 
-    close() {
+    async close() {
         if (!this.closed) {
             this.closed = true;
             this.dtlsState = 'closed';
@@ -118,7 +118,7 @@ export class KitchenWebRtcTransport {
             for (let c of this.consumers.values()) {
                 c.onClosed();
             }
-            backoff(async () => {
+            await backoff(async () => {
                 if (this.closedExternally) {
                     return;
                 }
