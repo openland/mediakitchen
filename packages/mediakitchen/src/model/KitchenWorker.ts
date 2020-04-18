@@ -61,13 +61,7 @@ export class KitchenWorker {
     //
 
     async createRouter(args: RouterCreateCommand['args'], retryKey: string) {
-        if (this.#status === 'dead') {
-            throw Error('Worker already dead');
-        }
         let res = await this.#api.createRouter(args, retryKey);
-        if (this.#status === 'dead' as any /* WTF? */) {
-            throw Error('Worker already dead');
-        }
         let id = res.id;
         if (this.#routers.has(id)) {
             let r = this.#routers.get(id)!;

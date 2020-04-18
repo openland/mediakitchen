@@ -31,13 +31,7 @@ export class KitchenRouter {
     }
 
     async createWebRTCTransport(args: WebRTCTransportCreateCommand['args'], retryKey: string) {
-        if (this.closed) {
-            throw Error('Router is cloed');
-        }
         let res = await this.api.createWebRtcTransport(this.id, args, retryKey);
-        if (this.closed) {
-            throw Error('Router is cloed');
-        }
         if (this.transports.has(res.id)) {
             let r = this.transports.get(res.id)!;
             r.applyState(res);

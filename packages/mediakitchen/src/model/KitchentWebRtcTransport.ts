@@ -70,13 +70,7 @@ export class KitchenWebRtcTransport {
     }
 
     async produce(args: ProduceCommand['args'], retryKey: string) {
-        if (this.closed) {
-            throw Error('Transport already closed');
-        }
         let res = await this.api.createProducer(this.id, args as ProduceCommand['args'], retryKey);
-        if (this.closed) {
-            throw Error('Transport already closed');
-        }
         if (this.producers.has(res.id)) {
             let r = this.producers.get(res.id)!;
             r.applyState(res);
@@ -89,13 +83,7 @@ export class KitchenWebRtcTransport {
     }
 
     async consume(producerId: string, args: ConsumeCommand['args'], retryKey: string) {
-        if (this.closed) {
-            throw Error('Transport already closed');
-        }
         let res = await this.api.createConsumer(this.id, producerId, args, retryKey);
-        if (this.closed) {
-            throw Error('Transport already closed');
-        }
         if (this.consumers.has(res.id)) {
             let r = this.consumers.get(res.id)!;
             r.applyState(res);
