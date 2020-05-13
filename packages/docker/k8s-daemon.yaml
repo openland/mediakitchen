@@ -16,7 +16,7 @@ spec:
       hostNetwork: true
       containers:
         - name: mediakitchen
-          image: openland/mediakitchen:v1
+          image: openland/mediakitchen:v4
           resources:
             limits:
               memory: 200Mi
