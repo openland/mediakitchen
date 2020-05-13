@@ -32,6 +32,24 @@ import { createWorker } from "./createWorker";
         let maxPort = process.env.MEDIAKITCHEN_MAX_PORT ? parseInt(process.env.MEDIAKITCHEN_MAX_PORT, 10) : 59999;
         let minPort = process.env.MEDIAKITCHEN_MIN_PORT ? parseInt(process.env.MEDIAKITCHEN_MIN_PORT, 10) : 59999;
 
+        // Resolve log tags
+        let logTags: string[] = [];
+        if (process.env.MEDIAKITCHEN_LOG_TAGS) {
+            logTags = process.env.MEDIAKITCHEN_LOG_TAGS.split(',');
+        }
+
+        // Resolve log level
+        let logLevel: 'debug' | 'warn' | 'error' | 'none' = 'error';
+        if (process.env.MEDIAKITCHEN_LOG_LEVEL === 'debug') {
+            logLevel = 'debug';
+        } else if (process.env.MEDIAKITCHEN_LOG_LEVEL === 'warn') {
+            logLevel = 'warn';
+        } else if (process.env.MEDIAKITCHEN_LOG_LEVEL === 'error') {
+            logLevel = 'error';
+        } else if (process.env.MEDIAKITCHEN_LOG_LEVEL === 'none') {
+            logLevel = 'none';
+        }
+
         // Resolve Root Topic
         let rootTopic = process.env.MEDIAKITCHEN_TOPIC || 'mediakitchen';
 
@@ -71,6 +89,8 @@ import { createWorker } from "./createWorker";
                 settings: {
                     rtcMaxPort: maxPort,
                     rtcMinPort: minPort,
+                    logTags,
+                    logLevel,
                     appData: appData
                 }
             });
