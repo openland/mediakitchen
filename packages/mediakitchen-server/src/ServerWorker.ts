@@ -98,6 +98,7 @@ export class ServerWorker {
 
     // State
     #alive: boolean = true;
+    #reportedAlive = false;
     #reportInterval!: NodeJS.Timeout;
     #subscription!: nats.Subscription;
     #currentSeq = 0;
@@ -699,7 +700,18 @@ export class ServerWorker {
     //
 
     #reportWorkerState = (state: 'alive' | 'dead') => {
-        this.#logger('Report: ' + state);
+        if (state === 'alive') {
+            if (!this.#reportedAlive) {
+                this.#reportedAlive = true;
+                this.#logger('Report: ' + state);
+            }
+        } else {
+            if (this.#reportedAlive) {
+                this.#reportedAlive = false;
+                this.#logger('Report: ' + state);
+            }
+        }
+
         let data: Report = {
             type: 'report',
             workerId: this.#id,
