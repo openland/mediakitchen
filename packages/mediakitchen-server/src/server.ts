@@ -29,8 +29,8 @@ import { createWorker } from "./createWorker";
         }
 
         // Resolve Ports
+        let minPort = process.env.MEDIAKITCHEN_MIN_PORT ? parseInt(process.env.MEDIAKITCHEN_MIN_PORT, 10) : 10000;
         let maxPort = process.env.MEDIAKITCHEN_MAX_PORT ? parseInt(process.env.MEDIAKITCHEN_MAX_PORT, 10) : 59999;
-        let minPort = process.env.MEDIAKITCHEN_MIN_PORT ? parseInt(process.env.MEDIAKITCHEN_MIN_PORT, 10) : 59999;
 
         // Resolve log tags
         let logTags: string[] = [];
@@ -62,6 +62,8 @@ import { createWorker } from "./createWorker";
         appData['process'] = processId;
         appData['topic'] = rootTopic;
         appData['ip'] = announce;
+        appData['maxPort'] = maxPort;
+        appData['minPort'] = minPort;
 
         for (let k of Object.keys(process.env)) {
             if (k.startsWith('MEDIAKITCHEN_')) {
