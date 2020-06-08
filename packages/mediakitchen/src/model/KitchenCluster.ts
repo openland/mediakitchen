@@ -48,6 +48,10 @@ export class KitchenCluster {
 
     connect = async () => {
         this.#subscription = await this.#client.subscribe(this.#rootTopic + '.report', (err, msg) => {
+            if (err) {
+                console.warn(err);
+                return;
+            }
             let event = msg.data;
             if (reportCodec.is(event)) {
                 if (event.state === 'alive') {
@@ -55,6 +59,8 @@ export class KitchenCluster {
                 } else if (event.state === 'dead') {
                     this.#onWorkerDead(event.workerId);
                 }
+            } else {
+                console.warn('Unknown message: ' + JSON.stringify(msg.data || {}));
             }
         });
     }
@@ -64,7 +70,11 @@ export class KitchenCluster {
             let timer = setTimeout(() => {
                 this.#onWorkerTimeout(id);
             }, 10000);
-            this.#workers.set(id, { worker: new KitchenWorker(id, appData, this), lastSeen: time, timer });
+            let worker = new KitchenWorker(id, appData, this);
+            this.#workers.set(id, { worker, lastSeen: time, timer });
+            if (this.onWorkerStatusChanged) {
+                this.onWorkerStatusChanged(worker);
+            }
         } else {
             let ex = this.#workers.get(id)!;
             if (ex.lastSeen > time) {
