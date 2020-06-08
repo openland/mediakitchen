@@ -11,6 +11,7 @@ export class KitchenCluster {
     #subscription!: nats.Subscription;
     #alive: boolean = true;
     #workers = new Map<string, { worker: KitchenWorker, lastSeen: number, timer: any }>();
+    #healthCheckTimeout: number;
 
     onWorkerStatusChanged?: (worker: KitchenWorker) => void;
 
@@ -18,6 +19,7 @@ export class KitchenCluster {
         this.#client = connectionInfo.nc;
         this.#rootTopic = connectionInfo.rootTopic || 'mediakitchen';
         this.connectionInfo = connectionInfo;
+        this.#healthCheckTimeout = connectionInfo.healthCheckTimeout || 10000;
     }
 
     get alive() {
@@ -69,7 +71,7 @@ export class KitchenCluster {
         if (!this.#workers.has(id)) {
             let timer = setTimeout(() => {
                 this.#onWorkerTimeout(id);
-            }, 10000);
+            }, this.#healthCheckTimeout);
             let worker = new KitchenWorker(id, appData, this);
             this.#workers.set(id, { worker, lastSeen: time, timer });
             if (this.onWorkerStatusChanged) {
@@ -89,7 +91,7 @@ export class KitchenCluster {
             clearTimeout(ex.timer);
             ex.timer = setTimeout(() => {
                 this.#onWorkerTimeout(id);
-            }, 10000);
+            }, this.#healthCheckTimeout);
         }
     }
 
