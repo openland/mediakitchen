@@ -741,6 +741,13 @@ export class ServerWorker {
     //
 
     #init = async () => {
+
+        // Handle worker death
+        this.#worker.on('dies', () => {
+            this.#loggerError('Dies');
+            this.close();
+        });
+
         // Subscribe for commands
         try {
             this.#subscription = await this.#nc.subscribe(this.#rootTopic + '.' + this.#id + '.commands', (err: nats.NatsError | null, src: nats.Msg) => {
@@ -766,6 +773,8 @@ export class ServerWorker {
                             this.#nc.publish(src.reply, { response: 'success', data: r });
                         }
                     } catch (e) {
+                        this.#loggerError('Command errored');
+                        this.#loggerError(e);
                         let message = 'Unknown error';
                         if (e && typeof e.message === 'string') {
                             message = e.message;
@@ -790,12 +799,6 @@ export class ServerWorker {
             this.#reportInterval = setInterval(() => {
                 this.#reportWorkerState('alive');
             }, 2500);
-
-            // Handle worker death
-            this.#worker.on('dies', () => {
-                this.#loggerError('Dies');
-                this.close();
-            });
 
             this.#loggerInfo('Started');
         } catch (e) {
