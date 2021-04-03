@@ -791,6 +791,7 @@ export class ServerWorker {
 
             // Handle worker death
             this.#worker.on('dies', () => {
+                this.#logger('Dies');
                 this.close();
             });
 

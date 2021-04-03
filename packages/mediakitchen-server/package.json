@@ -14,7 +14,7 @@
     "change-case": "^4.1.1",
     "debug": "^4.1.1",
     "mediakitchen-common": "1.0.0",
-    "mediasoup": "3.5.7",
+    "mediasoup": "3.7.1",
     "public-ip": "^4.0.1"
   }
 }

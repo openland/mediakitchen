@@ -7,6 +7,7 @@ import {
 } from 'mediakitchen-common';
 import { ServerWorker } from './ServerWorker';
 import { createWorker } from "./createWorker";
+import { WorkerLogTag } from 'mediasoup/lib/Worker';
 
 (async () => {
     try {
@@ -33,9 +34,9 @@ import { createWorker } from "./createWorker";
         let maxPort = process.env.MEDIAKITCHEN_MAX_PORT ? parseInt(process.env.MEDIAKITCHEN_MAX_PORT, 10) : 59999;
 
         // Resolve log tags
-        let logTags: string[] = [];
+        let logTags: WorkerLogTag[] = [];
         if (process.env.MEDIAKITCHEN_LOG_TAGS) {
-            logTags = process.env.MEDIAKITCHEN_LOG_TAGS.split(',');
+            logTags = process.env.MEDIAKITCHEN_LOG_TAGS.split(',') as WorkerLogTag[];
         }
 
         // Resolve log level
