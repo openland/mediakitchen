@@ -92,7 +92,8 @@ export class ServerWorker {
     #id: string
     #worker: mediasoup.types.Worker;
     #nc: nats.Client;
-    #logger: debug.Debugger;
+    #loggerInfo: debug.Debugger;
+    #loggerError: debug.Debugger;
     #listenIps: { ip: string, announceIp?: string }[] | string[];
     #rootTopic: string;
 
@@ -117,11 +118,12 @@ export class ServerWorker {
     #consumers = new Map<string, ConsumerHolder>();
     #consumersRepeatKey = new Map<string, string>();
 
-    constructor(id: string, worker: mediasoup.types.Worker, options: WorkerOptions, logger: debug.Debugger) {
+    constructor(id: string, worker: mediasoup.types.Worker, options: WorkerOptions, logger: debug.Debugger, loggerError: debug.Debugger) {
         this.#id = id;
         this.#worker = worker;
         this.#nc = options.connectionInfo.nc;
-        this.#logger = logger;
+        this.#loggerInfo = logger;
+        this.#loggerError = loggerError;
         this.#listenIps = options.listenIps || ['127.0.0.1'];
         this.#rootTopic = options.connectionInfo.rootTopic || 'mediakitchen';
         this.#init();
@@ -268,7 +270,7 @@ export class ServerWorker {
 
     #reportRouterState = (id: string, router: RouterHolder) => {
         let state = this.#getRouterState(id, router);
-        this.#logger('Router: ' + JSON.stringify(state));
+        this.#loggerInfo('Router: ' + JSON.stringify(state));
         this.#doEvent({
             type: 'state-router',
             state,
@@ -425,7 +427,7 @@ export class ServerWorker {
 
     #reportWebRtcTransportState = (id: string, holder: WebRtcTransportHolder) => {
         let state = this.#getWebRTCTransportState(id, holder);
-        this.#logger('Transport: ' + JSON.stringify(state));
+        this.#loggerInfo('Transport: ' + JSON.stringify(state));
         this.#doEvent({
             type: 'state-webrtc-transport',
             state,
@@ -547,7 +549,7 @@ export class ServerWorker {
 
     #reportProducerState = (id: string, holder: ProducerHolder) => {
         let state = this.#getProducerState(id, holder);
-        this.#logger('Producer: ' + JSON.stringify(state));
+        this.#loggerInfo('Producer: ' + JSON.stringify(state));
         this.#doEvent({
             type: 'state-producer',
             state,
@@ -682,7 +684,7 @@ export class ServerWorker {
 
     #reportConsumerState = (id: string, holder: ConsumerHolder) => {
         let state = this.#getConsumerState(id, holder);
-        this.#logger('Consumer: ' + JSON.stringify(state));
+        this.#loggerInfo('Consumer: ' + JSON.stringify(state));
         this.#doEvent({
             type: 'state-consumer',
             state,
@@ -703,12 +705,12 @@ export class ServerWorker {
         if (state === 'alive') {
             if (!this.#reportedAlive) {
                 this.#reportedAlive = true;
-                this.#logger('Report: ' + state);
+                this.#loggerInfo('Report: ' + state);
             }
         } else {
             if (this.#reportedAlive) {
                 this.#reportedAlive = false;
-                this.#logger('Report: ' + state);
+                this.#loggerError('Report: ' + state);
             }
         }
 
@@ -775,7 +777,7 @@ export class ServerWorker {
                 })();
             });
 
-            this.#logger('Subscribed');
+            this.#loggerInfo('Subscribed');
 
             // Already closed
             if (!this.#alive) {
@@ -791,13 +793,13 @@ export class ServerWorker {
 
             // Handle worker death
             this.#worker.on('dies', () => {
-                this.#logger('Dies');
+                this.#loggerError('Dies');
                 this.close();
             });
 
-            this.#logger('Started');
+            this.#loggerInfo('Started');
         } catch (e) {
-            this.#logger(e);
+            this.#loggerError(e);
             this.close();
         }
     }
@@ -807,7 +809,7 @@ export class ServerWorker {
         if (this.#alive) {
             this.#alive = false;
 
-            this.#logger('Closing');
+            this.#loggerInfo('Closing');
 
             // Stop reporting
             if (this.#reportInterval) {
@@ -825,7 +827,7 @@ export class ServerWorker {
             // Close Worker
             this.#worker.close();
 
-            this.#logger('Closed');
+            this.#loggerInfo('Closed');
 
             if (this.onClosed) {
                 this.onClosed();

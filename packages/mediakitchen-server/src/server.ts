@@ -8,10 +8,14 @@ import {
 import { ServerWorker } from './ServerWorker';
 import { createWorker } from "./createWorker";
 import { WorkerLogTag } from 'mediasoup/lib/Worker';
+import debug from 'debug';
+
+const loggerInfo = debug('mediakitchen:');
+loggerInfo.log = console.info.bind(console);
 
 (async () => {
     try {
-        console.log('Starting...');
+        loggerInfo('Starting...');
 
         // Resolve Workers Count
         const workersCount =
@@ -23,9 +27,9 @@ import { WorkerLogTag } from 'mediasoup/lib/Worker';
         let listenIp = process.env.MEDIAKITCHEN_LISTEN || '0.0.0.0';
         let announce = process.env.MEDIAKITCHEN_ANNOUNCE || '127.0.0.1';
         if (process.env.MEDIAKITCHEN_DETECT_IP === 'true') {
-            console.log('Detecting public ip...');
+            loggerInfo('Detecting public ip...');
             let ip = await publicIp.v4();
-            console.log('IP detected: ' + ip);
+            loggerInfo('IP detected: ' + ip);
             announce = ip;
         }
 
@@ -74,15 +78,15 @@ import { WorkerLogTag } from 'mediasoup/lib/Worker';
             }
         }
 
-        console.log('App Data:');
-        console.log(appData);
+        loggerInfo('App Data:');
+        loggerInfo(appData);
 
         // Connect to NATS
-        console.log('Connecting to NATS...');
+        loggerInfo('Connecting to NATS...');
         const nc = await connect({ payload: Payload.JSON, servers: natsHost.length > 0 ? natsHost : undefined });
 
         // Spawn Workers
-        console.log('Spawing workers....');
+        loggerInfo('Spawing workers....');
         let closing = false;
         let workers: ServerWorker[] = [];
         async function spawnWorker(index: number) {
@@ -101,7 +105,7 @@ import { WorkerLogTag } from 'mediasoup/lib/Worker';
                 if (closing) {
                     return;
                 }
-                console.log('Worker ' + w.id + ' closed');
+                loggerInfo('Worker ' + w.id + ' closed');
                 backoff(async () => {
                     if (closing) {
                         return;
@@ -113,7 +117,7 @@ import { WorkerLogTag } from 'mediasoup/lib/Worker';
                 w.close();
                 return;
             }
-            console.log('Worker ' + w.id + ' started');
+            loggerInfo('Worker ' + w.id + ' started');
             workers[index] = w;
         }
         for (let i = 0; i < workersCount; i++) {
@@ -121,7 +125,7 @@ import { WorkerLogTag } from 'mediasoup/lib/Worker';
         }
 
         // Started
-        console.log('Started');
+        loggerInfo('Started');
 
         // Graceful shutdown
         async function onExit() {
@@ -129,7 +133,7 @@ import { WorkerLogTag } from 'mediasoup/lib/Worker';
                 return;
             }
             closing = true;
-            console.log('Stopping....');
+            loggerInfo('Stopping....');
             for (let w of workers) {
                 w.close();
             }

@@ -9,9 +9,12 @@ export async function createWorker(options: WorkerOptions) {
     // Globaly unique id of a worker
     let id = randomKey();
 
-    let logger = debug('mediakitchen:' + id);
+    let loggerInfo = debug('mediakitchen:' + id);
+    loggerInfo.log = console.info.bind(console);
+    let loggerError = debug('mediakitchen:' + id + ':ERROR');
+    loggerError.log = console.error.bind(console);
 
-    logger('Starting');
+    loggerInfo('Starting');
 
     let settings: mediasoup.types.WorkerSettings = {
         logLevel: 'error',
@@ -23,7 +26,7 @@ export async function createWorker(options: WorkerOptions) {
 
     let rawWorker = await mediasoup.createWorker(settings);
 
-    logger('Raw Worker started');
+    loggerInfo('Raw Worker started');
 
-    return new ServerWorker(id, rawWorker, options, logger);
+    return new ServerWorker(id, rawWorker, options, loggerInfo, loggerError);
 }
