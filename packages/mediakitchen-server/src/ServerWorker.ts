@@ -743,7 +743,7 @@ export class ServerWorker {
     #init = async () => {
 
         // Handle worker death
-        this.#worker.on('dies', () => {
+        this.#worker.on('died', () => {
             this.#loggerError('Dies');
             this.close();
         });
