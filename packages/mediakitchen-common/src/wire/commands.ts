@@ -1,7 +1,7 @@
 import * as t from 'io-ts';
 import { eventsCodec } from './events';
-import { simpleMapCodec, dtlsParametersCodec, rtpParametersCodec, rtpCodecCapabilityCodec, rtpCapabilitiesCodec } from './common';
-import { routerStateCodec, RouterState, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec } from './states';
+import { simpleMapCodec, dtlsParametersCodec, rtpParametersCodec, rtpCodecCapabilityCodec, rtpCapabilitiesCodec, NumSctpStreamsCodec, SrtpParametersCodec } from './common';
+import { routerStateCodec, RouterState, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec, plainTransportStateCodec } from './states';
 
 //
 // Kill Worker
@@ -129,6 +129,67 @@ export type WebRTCTransportConnectCommand = t.TypeOf<typeof webRtcTransportConne
 
 export const webRtcTransportConnectResponseCodec = webRtcTransportStateCodec;
 export type WebRTCTransportConnectResponse = t.TypeOf<typeof webRtcTransportConnectResponseCodec>;
+
+//
+// Create Plain Transport Command
+//
+
+const plainTransportCreateCommandCodec = t.type({
+    type: t.literal('transport-plain-create'),
+    routerId: t.string,
+    args: t.intersection([t.type({
+        listenIp: t.string
+    }), t.partial({
+        rtcpMux: t.boolean,
+        comedia: t.boolean,
+        enableSctp: t.boolean,
+        numSctpStreams: NumSctpStreamsCodec,
+        maxSctpMessageSize: t.number,
+        sctpSendBufferSize: t.number,
+        enableSrtp: t.boolean,
+        srtpCryptoSuite: t.union([t.literal('AES_CM_128_HMAC_SHA1_80'), t.literal('AES_CM_128_HMAC_SHA1_32')]),
+        appData: simpleMapCodec
+    })])
+});
+export type PlainTransportCreateCommand = t.TypeOf<typeof plainTransportCreateCommandCodec>;
+
+export const plainTransportCreateResponseCodec = plainTransportStateCodec;
+export type PlainTransportCreateResponse = t.TypeOf<typeof plainTransportCreateResponseCodec>;
+
+//
+// Connect Plain Transport Command
+//
+
+const plainTransportConnectCommandCodec = t.type({
+    type: t.literal('transport-plain-connect'),
+    args: t.intersection([t.type({
+        id: t.string,
+    }), t.partial({
+        ip: t.string,
+        port: t.number,
+        rtcpPort: t.number,
+        srtpParameters: SrtpParametersCodec
+    })])
+});
+export type PlainTransportConnectCommand = t.TypeOf<typeof plainTransportConnectCommandCodec>;
+
+export const plainTransportConnectResponseCodec = plainTransportStateCodec;
+export type PlainTransportConnectResponse = t.TypeOf<typeof plainTransportConnectResponseCodec>;
+
+//
+// Close Plain Transport Command
+//
+
+const plainTransportCloseCommandCodec = t.type({
+    type: t.literal('transport-plain-close'),
+    args: t.type({
+        id: t.string,
+    })
+});
+export type PlainTransportCloseCommand = t.TypeOf<typeof plainTransportCloseCommandCodec>;
+
+export const plainTransportCloseResponseCodec = plainTransportStateCodec;
+export type PlainTransportCloseResponse = t.TypeOf<typeof plainTransportStateCodec>;
 
 //
 // Produce Create Command
@@ -278,6 +339,10 @@ export const commandsCodec = t.union([
     webRtcTransportCreateCommandCodec,
     webRtcTransportConnectCommandCodec,
     webRtcTransportCloseCommandCodec,
+
+    plainTransportCreateCommandCodec,
+    plainTransportCloseCommandCodec,
+    plainTransportConnectCommandCodec,
 
     produceCommandCodec,
     producePauseCommandCodec,

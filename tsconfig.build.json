@@ -6,7 +6,8 @@
         "strict": true,
         "lib": [
             "es2016",
-            "ES2018.AsyncIterable"
+            "ES2018.AsyncIterable",
+            "dom"
         ],
         "declaration": true,
         "moduleResolution": "node",

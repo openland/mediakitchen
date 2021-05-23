@@ -6,7 +6,8 @@ import {
     iceCandidateCodec,
     iceStateCodec,
     dtlsStateCodec,
-    rtpParametersCodec
+    rtpParametersCodec,
+    transportTupleCodec
 } from './common';
 
 export const routerStateCodec = t.type({
@@ -30,6 +31,16 @@ export const webRtcTransportStateCodec = t.type({
     time: t.number
 });
 export type WebRtcTransportState = t.TypeOf<typeof webRtcTransportStateCodec>;
+
+export const plainTransportStateCodec = t.type({
+    id: t.string,
+    closed: t.boolean,
+    appData: simpleMapCodec,
+    tuple: transportTupleCodec,
+    rtcpTuple: t.union([transportTupleCodec, t.null]),
+    time: t.number
+});
+export type PlainTransportState = t.TypeOf<typeof plainTransportStateCodec>;
 
 export const producerStateCodec = t.type({
     id: t.string,

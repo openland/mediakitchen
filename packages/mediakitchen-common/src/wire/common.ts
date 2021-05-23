@@ -2,7 +2,7 @@ import * as t from 'io-ts';
 
 // App Data
 
-export const simpleMapCodec = t.dictionary(t.string, t.union([t.string, t.number, t.boolean]));
+export const simpleMapCodec = t.record(t.string, t.union([t.string, t.number, t.boolean]));
 export type SimpleMap = t.TypeOf<typeof simpleMapCodec>;
 
 // DTLS
@@ -147,3 +147,45 @@ export const rtpCapabilitiesCodec = t.partial({
     fecMechanisms: t.array(t.string)
 })
 export type RtpCapabilities = t.TypeOf<typeof rtpCapabilitiesCodec>;
+
+// Plain Transport
+
+export const transportTupleCodec = t.intersection([t.type({
+    localIp: t.string,
+    localPort: t.number,
+    protocol: t.union([t.literal('tcp'), t.literal('udp')])
+}), t.partial({
+    remoteIp: t.string,
+    remotePort: t.number
+})]);
+export type TransportTuple = t.TypeOf<typeof transportTupleCodec>;
+
+// SCTP Parameters
+
+export const SctpParametersCodec = t.type({
+    port: t.number,
+    OS: t.number,
+    MIS: t.number,
+    maxMessageSize: t.number
+});
+export type SctpParameters = t.TypeOf<typeof SctpParametersCodec>;
+
+// SRTP Parameters
+
+export const SrtpParametersCodec = t.type({
+    cryptoSuite: t.union([t.literal('AES_CM_128_HMAC_SHA1_80'), t.literal('AES_CM_128_HMAC_SHA1_32')]),
+    keyBase64: t.string
+});
+export type SrtpParameters = t.TypeOf<typeof SrtpParametersCodec>;
+
+// SRTP State
+
+export const SrtpStateCodec = t.union([t.literal('new'), t.literal('connecting'), t.literal('connected'), t.literal('failed'), t.literal('failed'), t.literal('closed')]);
+export type SrtpState = t.TypeOf<typeof SrtpStateCodec>;
+
+// NumSctpStreams
+export const NumSctpStreamsCodec = t.type({
+    OS: t.number,
+    MIS: t.number
+});
+export type NumSctpStreams =t.TypeOf<typeof NumSctpStreamsCodec>;

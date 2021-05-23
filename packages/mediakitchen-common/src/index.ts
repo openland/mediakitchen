@@ -15,6 +15,11 @@ export {
     RtcpParameters,
     RtcpFeedback,
     SimpleMap,
+    SctpParameters,
+    SrtpParameters,
+    SrtpState,
+    TransportTuple,
+    NumSctpStreams,
     simpleMapCodec,
     dtlsRoleCodec,
     dtlsParametersCodec,
@@ -30,7 +35,12 @@ export {
     rtpEncodingCodec,
     rtcpParameters,
     rtpParametersCodec,
-    rtpCapabilitiesCodec
+    rtpCapabilitiesCodec,
+    transportTupleCodec,
+    SctpParametersCodec,
+    SrtpParametersCodec,
+    SrtpStateCodec,
+    NumSctpStreamsCodec
 } from './wire/common';
 export {
     eventsCodec,
@@ -52,54 +62,77 @@ export {
 } from './wire/states';
 export {
     GetEventsCommand,
-    getEventsResponseCodec,
     GetEventsResponse,
+    getEventsResponseCodec,
+
     GetStateCommand,
-    getStateResponseCodec,
     GetStateResponse,
+    getStateResponseCodec,
+
     RouterCreateCommand,
-    routerCreateResponseCodec,
     RouterCreateResponse,
+    routerCreateResponseCodec,
+
     RouterCloseCommand,
-    routerCloseResponseCodec,
     RouterCloseResponse,
+    routerCloseResponseCodec,
+
+    PlainTransportCreateCommand,
+    PlainTransportCreateResponse,
+    plainTransportCreateResponseCodec,
+    PlainTransportCloseCommand,
+    PlainTransportCloseResponse,
+    plainTransportCloseResponseCodec,
+    PlainTransportConnectCommand,
+    PlainTransportConnectResponse,
+    plainTransportConnectResponseCodec,
+
     WebRTCTransportCreateCommand,
-    webRTCTransportCreateResponseCodec,
     WebRTCTransportCreateResponse,
+    webRTCTransportCreateResponseCodec,
     WebRTCTransportCloseCommand,
-    webRtcTransportCloseResponseCodec,
     WebRTCTransportCloseResponse,
+    webRtcTransportCloseResponseCodec,
     WebRTCTransportConnectCommand,
-    webRtcTransportConnectResponseCodec,
     WebRTCTransportConnectResponse,
+    webRtcTransportConnectResponseCodec,
+
     ProduceCommand,
-    produceResponseCodec,
     ProduceResponse,
+    produceResponseCodec,
+
     ProducePauseCommand,
-    producePauseResponseCodec,
     ProducePauseResponse,
+    producePauseResponseCodec,
+
     ProduceResumeCommand,
-    produceResumeResponseCodec,
     ProduceResumeResponse,
+    produceResumeResponseCodec,
+
     ProduceCloseCommand,
-    produceCloseResponseCodec,
     ProduceCloseResponse,
+    produceCloseResponseCodec,
+
     ConsumeCommand,
-    consumeResponseCodec,
     ConsumeResponse,
+    consumeResponseCodec,
+
     ConsumePauseCommand,
-    consumePauseResponseCodec,
     ConsumePauseResponse,
+    consumePauseResponseCodec,
+
     ConsumeResumeCommand,
-    consumeResumeResponseCodec,
     ConsumeResumeResponse,
+    consumeResumeResponseCodec,
+
     ConsumeCloseCommand,
-    consumeCloseResponseCodec,
     ConsumeCloseResponse,
+    consumeCloseResponseCodec,
+
     commandsCodec,
     Commands,
     commandBoxCodec,
-    CommandBox
+    CommandBox,
 } from './wire/commands';
 export {
     backoff

@@ -1,3 +1,4 @@
+import { PlainTransportConnectCommand } from './../../../mediakitchen-common/src/wire/commands';
 import { ConnectionInfo } from '../ConnectionInfo';
 import {
     Commands,
@@ -22,9 +23,12 @@ import {
     consumeResumeResponseCodec,
     getStateResponseCodec,
     getEventsResponseCodec,
-    eventBoxCodec, 
+    eventBoxCodec,
     Event,
-    backoff
+    backoff,
+    PlainTransportCreateCommand,
+    plainTransportCreateResponseCodec,
+    plainTransportCloseResponseCodec
 } from 'mediakitchen-common';
 import * as nats from 'ts-nats';
 import * as t from 'io-ts';
@@ -71,6 +75,20 @@ export class KitchenApi {
 
     closeWebRtcTransport = async (id: string) => {
         return await this.#doCommand({ type: 'transport-webrtc-close', args: { id } }, '', webRtcTransportCloseResponseCodec);
+    }
+
+    // Plain Transport
+
+    createPlainTransport = async (routerId: string, command: PlainTransportCreateCommand['args'], retryKey: string) => {
+        return await this.#doCommand({ type: 'transport-plain-create', routerId, args: command }, retryKey, plainTransportCreateResponseCodec);
+    }
+
+    connectPlainTransport = async (command: PlainTransportConnectCommand['args']) => {
+        return await this.#doCommand({ type: 'transport-plain-connect', args: command }, '', plainTransportCreateResponseCodec);
+    }
+
+    closePlainTransport = async (id: string) => {
+        return await this.#doCommand({ type: 'transport-plain-close', args: { id } }, '', plainTransportCloseResponseCodec);
     }
 
     // Producer

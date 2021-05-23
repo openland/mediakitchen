@@ -1,3 +1,5 @@
+import { PlainTransportState } from './../../mediakitchen-common/src/wire/states';
+import { PlainTransportCreateCommand, PlainTransportCloseCommand, PlainTransportCloseResponse, PlainTransportConnectCommand, PlainTransportConnectResponse } from './../../mediakitchen-common/src/wire/commands';
 import * as nats from 'ts-nats';
 import * as mediasoup from 'mediasoup';
 import debug from 'debug';
@@ -44,6 +46,7 @@ import {
     RtpParameters,
     SimpleMap,
     randomKey,
+    TransportTuple,
     now
 } from 'mediakitchen-common';
 
@@ -60,6 +63,15 @@ interface WebRtcTransportHolder {
     dtlsParameters: mediasoup.types.DtlsParameters;
     connectCalled: boolean;
     transport: mediasoup.types.WebRtcTransport | null;
+}
+
+interface PlainTransportHolder {
+    routerId: string;
+    appData: SimpleMap;
+    tuple: TransportTuple;
+    rtcpTuple: TransportTuple | null;
+    connectCalled: boolean;
+    transport: mediasoup.types.PlainTransport | null;
 }
 
 interface ProducerHolder {
@@ -109,8 +121,11 @@ export class ServerWorker {
     #routersRepeatKey = new Map<string, string>();
     #routers = new Map<string, RouterHolder>();
 
-    #transports = new Map<string, WebRtcTransportHolder>();
-    #transportsRepeatKey = new Map<string, string>();
+    #webRtcTransports = new Map<string, WebRtcTransportHolder>();
+    #webRtcTransportsRepeatKey = new Map<string, string>();
+
+    #plainTransports = new Map<string, PlainTransportHolder>();
+    #plainTransportsRepeatKey = new Map<string, string>();
 
     #producers = new Map<string, ProducerHolder>();
     #producersRepeatKey = new Map<string, string>();
@@ -148,6 +163,12 @@ export class ServerWorker {
             return this.#commandWebRTCTransportClose(command);
         } else if (command.type === 'transport-webrtc-connect') {
             return this.#commandWebRTCTransportConnect(command);
+        } else if (command.type === 'transport-plain-create') {
+            return this.#commandPlainTransportCreate(command, repeatKey);
+        } else if (command.type === 'transport-plain-close') {
+            return this.#commandPlainTransportClose(command);
+        } else if (command.type === 'transport-plain-connect') {
+            return this.#commandPlainTransportConnect(command);
         } else if (command.type === 'produce-create') {
             return this.#commandProduceCreate(command, repeatKey);
         } else if (command.type === 'produce-pause') {
@@ -294,9 +315,9 @@ export class ServerWorker {
     //
 
     #commandWebRTCTransportCreate = async (command: WebRTCTransportCreateCommand, repeatKey: string): Promise<WebRTCTransportCreateResponse> => {
-        if (this.#transportsRepeatKey.has(repeatKey)) {
-            let id = this.#transportsRepeatKey.get(repeatKey)!;
-            let holder = this.#transports.get(id)!;
+        if (this.#webRtcTransportsRepeatKey.has(repeatKey)) {
+            let id = this.#webRtcTransportsRepeatKey.get(repeatKey)!;
+            let holder = this.#webRtcTransports.get(id)!;
             return this.#getWebRTCTransportState(id, holder);
         }
         let routerHolder = this.#routers.get(command.routerId);
@@ -325,23 +346,23 @@ export class ServerWorker {
             throw Error('Router closed');
         }
         tr.observer.on('close', () => {
-            let holder = this.#transports.get(id)!;
+            let holder = this.#webRtcTransports.get(id)!;
             this.#onWebRtcTransportClose(id, holder);
         });
         tr.on('icestatechange', () => {
-            let holder = this.#transports.get(id)!;
+            let holder = this.#webRtcTransports.get(id)!;
             this.#reportWebRtcTransportState(id, holder);
         });
         tr.on('iceselectedtuplechange', () => {
-            let holder = this.#transports.get(id)!;
+            let holder = this.#webRtcTransports.get(id)!;
             this.#reportWebRtcTransportState(id, holder);
         });
         tr.on('dtlsstatechange', () => {
-            let holder = this.#transports.get(id)!;
+            let holder = this.#webRtcTransports.get(id)!;
             this.#reportWebRtcTransportState(id, holder);
         });
         tr.on('sctpstatechange', () => {
-            let holder = this.#transports.get(id)!;
+            let holder = this.#webRtcTransports.get(id)!;
             this.#reportWebRtcTransportState(id, holder);
         });
         let holder: WebRtcTransportHolder = {
@@ -353,13 +374,13 @@ export class ServerWorker {
             appData: appData,
             connectCalled: false
         };
-        this.#transportsRepeatKey.set(repeatKey, id);
-        this.#transports.set(id, holder);
+        this.#webRtcTransportsRepeatKey.set(repeatKey, id);
+        this.#webRtcTransports.set(id, holder);
         return this.#getWebRTCTransportState(id, holder);
     }
 
     #commandWebRTCTransportConnect = async (command: WebRTCTransportConnectCommand): Promise<WebRTCTransportConnectResponse> => {
-        let holder = this.#transports.get(command.args.id);
+        let holder = this.#webRtcTransports.get(command.args.id);
         if (!holder) {
             throw Error('Unable to find transport ' + command.args.id);
         }
@@ -383,7 +404,7 @@ export class ServerWorker {
     }
 
     #commandWebRTCTransportClose = async (command: WebRTCTransportCloseCommand): Promise<WebRTCTransportCloseResponse> => {
-        let holder = this.#transports.get(command.args.id);
+        let holder = this.#webRtcTransports.get(command.args.id);
         if (!holder) {
             throw Error('Unable to find transport');
         }
@@ -439,6 +460,143 @@ export class ServerWorker {
     }
 
     //
+    // Plain Transport
+    //
+
+    #commandPlainTransportCreate = async (command: PlainTransportCreateCommand, repeatKey: string) => {
+        if (this.#plainTransportsRepeatKey.has(repeatKey)) {
+            let id = this.#plainTransportsRepeatKey.get(repeatKey)!;
+            let holder = this.#plainTransports.get(id)!;
+            return this.#getPlainTransportState(id, holder);
+        }
+        let routerHolder = this.#routers.get(command.routerId);
+        if (!routerHolder) {
+            throw Error('Unable to find router');
+        }
+        if (!routerHolder.router) {
+            throw Error('Router closed');
+        }
+        let router = routerHolder.router;
+        let id = randomKey();
+        let appData = command.args.appData || {};
+        let tr = await router.createPlainTransport({
+            listenIp: command.args.listenIp,
+            rtcpMux: command.args.rtcpMux,
+            comedia: command.args.comedia,
+            enableSctp: command.args.enableSctp,
+            numSctpStreams: command.args.numSctpStreams,
+            maxSctpMessageSize: command.args.maxSctpMessageSize,
+            sctpSendBufferSize: command.args.sctpSendBufferSize,
+            enableSrtp: command.args.enableSrtp,
+            srtpCryptoSuite: command.args.srtpCryptoSuite,
+            appData: appData
+        });
+        if (!routerHolder.router) {
+            throw Error('Router closed');
+        }
+
+        if (!routerHolder.router) {
+            throw Error('Router closed');
+        }
+        tr.observer.on('close', () => {
+            let holder = this.#plainTransports.get(id)!;
+            this.#onPlainTransportClose(id, holder);
+        });
+        tr.on('tuple', () => {
+            let holder = this.#plainTransports.get(id)!;
+            this.#reportPlainTransportState(id, holder);
+        });
+        tr.on('rtcptuple', () => {
+            let holder = this.#plainTransports.get(id)!;
+            this.#reportPlainTransportState(id, holder);
+        });
+        tr.on('sctpstatechange', () => {
+            let holder = this.#plainTransports.get(id)!;
+            this.#reportPlainTransportState(id, holder);
+        });
+        let holder: PlainTransportHolder = {
+            transport: tr,
+            routerId: command.routerId,
+            appData: appData,
+            tuple: tr.tuple,
+            rtcpTuple: tr.rtcpTuple ? tr.rtcpTuple : null,
+            connectCalled: false
+        };
+        this.#plainTransportsRepeatKey.set(repeatKey, id);
+        this.#plainTransports.set(id, holder);
+        return this.#getPlainTransportState(id, holder);
+    }
+
+    #commandPlainTransportConnect = async (command: PlainTransportConnectCommand): Promise<PlainTransportConnectResponse> => {
+        let holder = this.#plainTransports.get(command.args.id);
+        if (!holder) {
+            throw Error('Unable to find transport');
+        }
+        if (!holder.transport) {
+            return this.#getPlainTransportState(command.args.id, holder);
+        }
+
+        // Connect
+        if (!holder.connectCalled) {
+            holder.connectCalled = true;
+            await holder.transport.connect({
+                ip: command.args.ip,
+                port: command.args.port,
+                rtcpPort: command.args.rtcpPort,
+                srtpParameters: command.args.srtpParameters
+            });
+        }
+
+        return this.#getPlainTransportState(command.args.id, holder);
+    };
+
+    #commandPlainTransportClose = async (command: PlainTransportCloseCommand): Promise<PlainTransportCloseResponse> => {
+        let holder = this.#plainTransports.get(command.args.id);
+        if (!holder) {
+            throw Error('Unable to find transport');
+        }
+        if (!holder.transport) {
+            return this.#getPlainTransportState(command.args.id, holder);
+        }
+
+        // Close Transport
+        holder.transport.close();
+        this.#onPlainTransportClose(command.args.id, holder);
+        return this.#getPlainTransportState(command.args.id, holder);
+    };
+
+    #getPlainTransportState = (id: string, holder: PlainTransportHolder): PlainTransportState => {
+        return {
+            id,
+            closed: !holder.transport,
+            tuple: holder.tuple,
+            rtcpTuple: holder.rtcpTuple,
+            appData: holder.appData,
+            time: now()
+        }
+    }
+
+    #onPlainTransportClose = (id: string, holder: PlainTransportHolder) => {
+        if (holder.transport) {
+            holder.transport = null;
+            this.#reportPlainTransportState(id, holder);
+        }
+    }
+
+    #reportPlainTransportState = (id: string, holder: PlainTransportHolder) => {
+        let state = this.#getPlainTransportState(id, holder);
+        this.#loggerInfo('Transport: ' + JSON.stringify(state));
+        this.#doEvent({
+            type: 'state-plain-transport',
+            state,
+            transportId: id,
+            routerId: holder.routerId,
+            workerId: this.#id,
+            time: now(),
+        });
+    }
+
+    //
     // Producer
     //
 
@@ -449,17 +607,22 @@ export class ServerWorker {
             return this.#getProducerState(id, holder);
         }
 
-        let transportHolder = this.#transports.get(command.transportId);
-        if (!transportHolder) {
+        // Find transport
+        let transportHolder = this.#webRtcTransports.get(command.transportId) || this.#plainTransports.get(command.transportId);
+        if (transportHolder) {
+            if (!transportHolder.transport) {
+                throw Error('Transport closed');
+            }
+        } else {
             throw Error('Unable to find transport');
         }
-        if (!transportHolder.transport) {
-            throw Error('Transport closed');
-        }
 
+        // Create producer
         let id = randomKey();
         let appData = command.args.appData || {};
         let producer = await transportHolder.transport.produce(command.args);
+
+        // What if transport has been closed concurrently?
         if (!transportHolder.transport) {
             throw Error('Transport closed');
         }
@@ -572,7 +735,7 @@ export class ServerWorker {
             return this.#getConsumerState(id, holder);
         }
 
-        let transport = this.#transports.get(command.transportId);
+        let transport = this.#webRtcTransports.get(command.transportId);
         if (!transport) {
             throw Error('Unable to find transport');
         }
@@ -761,7 +924,12 @@ export class ServerWorker {
                 // Decode wire format
                 let boxData = commandBoxCodec.decode(src.data);
                 if (isLeft(boxData)) {
-                    return /* Ignore */;
+                    this.#loggerError('Invalit package');
+                    this.#loggerError(boxData.left);
+                    if (src.reply && this.#alive) {
+                        this.#nc.publish(src.reply, { response: 'error', message: 'Invalid package' });
+                    }
+                    return;
                 }
                 let box = boxData.right;
 

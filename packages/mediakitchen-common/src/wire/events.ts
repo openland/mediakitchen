@@ -1,6 +1,6 @@
 import * as t from 'io-ts';
 import { simpleMapCodec } from './common';
-import { routerStateCodec, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec } from './states';
+import { routerStateCodec, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec, plainTransportStateCodec } from './states';
 
 //
 // State Updates
@@ -17,6 +17,15 @@ const routerStateEvent = t.type({
 const webRtcTransportStateEvent = t.type({
     type: t.literal('state-webrtc-transport'),
     state: webRtcTransportStateCodec,
+    transportId: t.string,
+    routerId: t.string,
+    workerId: t.string,
+    time: t.number
+});
+
+const plainTransportStateEvent = t.type({
+    type: t.literal('state-plain-transport'),
+    state: plainTransportStateCodec,
     transportId: t.string,
     routerId: t.string,
     workerId: t.string,
@@ -47,6 +56,7 @@ const consumerStateEvent = t.type({
 export const eventsCodec = t.union([
     routerStateEvent,
     webRtcTransportStateEvent,
+    plainTransportStateEvent,
     producerStateEvent,
     consumerStateEvent
 ]);
