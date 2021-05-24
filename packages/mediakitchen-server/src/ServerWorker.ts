@@ -61,7 +61,8 @@ import {
     SimpleMap,
     randomKey,
     TransportTuple,
-    now
+    now,
+    AsyncLockMap
 } from 'mediakitchen-common';
 
 interface RouterHolder {
@@ -159,6 +160,8 @@ export class ServerWorker {
 
     #consumers = new Map<string, ConsumerHolder>();
     #consumersRepeatKey = new Map<string, string>();
+
+    #lock = new AsyncLockMap();
 
     constructor(id: string, worker: mediasoup.types.Worker, options: WorkerOptions, logger: debug.Debugger, loggerError: debug.Debugger) {
         this.#id = id;
@@ -260,43 +263,45 @@ export class ServerWorker {
     // Router
     //
 
-    #commandRouterCreate = async (command: RouterCreateCommand, repeatKey: string): Promise<RouterCreateResponse> => {
-        if (this.#routersRepeatKey.has(repeatKey)) {
-            let id = this.#routersRepeatKey.get(repeatKey)!;
-            let router = this.#routers.get(id)!;
-            if (!router.router) {
-                return {
-                    id: id,
-                    appData: router.appData,
-                    closed: true,
-                    time: now()
-                };
-            } else {
-                return {
-                    id: id,
-                    appData: router.appData,
-                    closed: false,
-                    time: now()
-                };
+    #commandRouterCreate = (command: RouterCreateCommand, repeatKey: string): Promise<RouterCreateResponse> => {
+        return this.#lock.inLock('router-create-' + repeatKey, async () => {
+            if (this.#routersRepeatKey.has(repeatKey)) {
+                let id = this.#routersRepeatKey.get(repeatKey)!;
+                let router = this.#routers.get(id)!;
+                if (!router.router) {
+                    return {
+                        id: id,
+                        appData: router.appData,
+                        closed: true,
+                        time: now()
+                    };
+                } else {
+                    return {
+                        id: id,
+                        appData: router.appData,
+                        closed: false,
+                        time: now()
+                    };
+                }
             }
-        }
 
-        // Create Router
-        let id = randomKey();
-        let appData = command.args.appData || {};
-        let router = await this.#worker.createRouter({ mediaCodecs: command.args.mediaCodecs, appData });
-        router.observer.on('close', () => {
-            let router = this.#routers.get(id)!;
-            this.#onRouterClose(id, router);
+            // Create Router
+            let id = randomKey();
+            let appData = command.args.appData || {};
+            let router = await this.#worker.createRouter({ mediaCodecs: command.args.mediaCodecs, appData });
+            router.observer.on('close', () => {
+                let router = this.#routers.get(id)!;
+                this.#onRouterClose(id, router);
+            });
+
+            // Register Router
+            let holder = { router, appData };
+            this.#routers.set(id, holder);
+            this.#routersRepeatKey.set(repeatKey, id);
+            this.#reportRouterState(id, holder);
+
+            return { id: id, appData: router.appData, closed: false, time: now() };
         });
-
-        // Register Router
-        let holder = { router, appData };
-        this.#routers.set(id, holder);
-        this.#routersRepeatKey.set(repeatKey, id);
-        this.#reportRouterState(id, holder);
-
-        return { id: id, appData: router.appData, closed: false, time: now() };
     }
 
     #commandRouterClose = async (command: RouterCloseCommand): Promise<RouterCloseResponse> => {
@@ -349,70 +354,72 @@ export class ServerWorker {
     // Transport
     //
 
-    #commandWebRTCTransportCreate = async (command: WebRTCTransportCreateCommand, repeatKey: string): Promise<WebRTCTransportCreateResponse> => {
-        if (this.#webRtcTransportsRepeatKey.has(repeatKey)) {
-            let id = this.#webRtcTransportsRepeatKey.get(repeatKey)!;
-            let holder = this.#webRtcTransports.get(id)!;
+    #commandWebRTCTransportCreate = (command: WebRTCTransportCreateCommand, repeatKey: string): Promise<WebRTCTransportCreateResponse> => {
+        return this.#lock.inLock('webrtc-transport-create-' + repeatKey, async () => {
+            if (this.#webRtcTransportsRepeatKey.has(repeatKey)) {
+                let id = this.#webRtcTransportsRepeatKey.get(repeatKey)!;
+                let holder = this.#webRtcTransports.get(id)!;
+                return this.#getWebRTCTransportState(id, holder);
+            }
+            let routerHolder = this.#routers.get(command.routerId);
+            if (!routerHolder) {
+                throw Error('Unable to find router');
+            }
+            if (!routerHolder.router) {
+                throw Error('Router closed');
+            }
+            let router = routerHolder.router;
+            let id = randomKey();
+            let appData = command.args.appData || {};
+            let tr = await router.createWebRtcTransport({
+                listenIps: [this.#listenIp],
+                enableUdp: command.args.enableUdp,
+                enableTcp: command.args.enableTcp,
+                preferUdp: command.args.preferUdp,
+                preferTcp: command.args.preferTcp,
+                initialAvailableOutgoingBitrate: command.args.initialAvailableOutgoingBitrate,
+                enableSctp: command.args.enableSctp,
+                numSctpStreams: command.args.numSctpStreams,
+                maxSctpMessageSize: command.args.maxSctpMessageSize,
+                sctpSendBufferSize: command.args.sctpSendBufferSize,
+                appData: appData
+            });
+            if (!routerHolder.router) {
+                throw Error('Router closed');
+            }
+            tr.observer.on('close', () => {
+                let holder = this.#webRtcTransports.get(id)!;
+                this.#onWebRtcTransportClose(id, holder);
+            });
+            tr.on('icestatechange', () => {
+                let holder = this.#webRtcTransports.get(id)!;
+                this.#reportWebRtcTransportState(id, holder);
+            });
+            tr.on('iceselectedtuplechange', () => {
+                let holder = this.#webRtcTransports.get(id)!;
+                this.#reportWebRtcTransportState(id, holder);
+            });
+            tr.on('dtlsstatechange', () => {
+                let holder = this.#webRtcTransports.get(id)!;
+                this.#reportWebRtcTransportState(id, holder);
+            });
+            tr.on('sctpstatechange', () => {
+                let holder = this.#webRtcTransports.get(id)!;
+                this.#reportWebRtcTransportState(id, holder);
+            });
+            let holder: WebRtcTransportHolder = {
+                transport: tr,
+                routerId: command.routerId,
+                iceCandidates: tr.iceCandidates,
+                iceParameters: tr.iceParameters,
+                dtlsParameters: tr.dtlsParameters,
+                appData: appData,
+                connectCalled: false
+            };
+            this.#webRtcTransportsRepeatKey.set(repeatKey, id);
+            this.#webRtcTransports.set(id, holder);
             return this.#getWebRTCTransportState(id, holder);
-        }
-        let routerHolder = this.#routers.get(command.routerId);
-        if (!routerHolder) {
-            throw Error('Unable to find router');
-        }
-        if (!routerHolder.router) {
-            throw Error('Router closed');
-        }
-        let router = routerHolder.router;
-        let id = randomKey();
-        let appData = command.args.appData || {};
-        let tr = await router.createWebRtcTransport({
-            listenIps: [this.#listenIp],
-            enableUdp: command.args.enableUdp,
-            enableTcp: command.args.enableTcp,
-            preferUdp: command.args.preferUdp,
-            preferTcp: command.args.preferTcp,
-            initialAvailableOutgoingBitrate: command.args.initialAvailableOutgoingBitrate,
-            enableSctp: command.args.enableSctp,
-            numSctpStreams: command.args.numSctpStreams,
-            maxSctpMessageSize: command.args.maxSctpMessageSize,
-            sctpSendBufferSize: command.args.sctpSendBufferSize,
-            appData: appData
         });
-        if (!routerHolder.router) {
-            throw Error('Router closed');
-        }
-        tr.observer.on('close', () => {
-            let holder = this.#webRtcTransports.get(id)!;
-            this.#onWebRtcTransportClose(id, holder);
-        });
-        tr.on('icestatechange', () => {
-            let holder = this.#webRtcTransports.get(id)!;
-            this.#reportWebRtcTransportState(id, holder);
-        });
-        tr.on('iceselectedtuplechange', () => {
-            let holder = this.#webRtcTransports.get(id)!;
-            this.#reportWebRtcTransportState(id, holder);
-        });
-        tr.on('dtlsstatechange', () => {
-            let holder = this.#webRtcTransports.get(id)!;
-            this.#reportWebRtcTransportState(id, holder);
-        });
-        tr.on('sctpstatechange', () => {
-            let holder = this.#webRtcTransports.get(id)!;
-            this.#reportWebRtcTransportState(id, holder);
-        });
-        let holder: WebRtcTransportHolder = {
-            transport: tr,
-            routerId: command.routerId,
-            iceCandidates: tr.iceCandidates,
-            iceParameters: tr.iceParameters,
-            dtlsParameters: tr.dtlsParameters,
-            appData: appData,
-            connectCalled: false
-        };
-        this.#webRtcTransportsRepeatKey.set(repeatKey, id);
-        this.#webRtcTransports.set(id, holder);
-        return this.#getWebRTCTransportState(id, holder);
     }
 
     #commandWebRTCTransportConnect = async (command: WebRTCTransportConnectCommand): Promise<WebRTCTransportConnectResponse> => {
@@ -516,72 +523,74 @@ export class ServerWorker {
     // Plain Transport
     //
 
-    #commandPlainTransportCreate = async (command: PlainTransportCreateCommand, repeatKey: string) => {
-        if (this.#plainTransportsRepeatKey.has(repeatKey)) {
-            let id = this.#plainTransportsRepeatKey.get(repeatKey)!;
-            let holder = this.#plainTransports.get(id)!;
-            return this.#getPlainTransportState(id, holder);
-        }
-        let routerHolder = this.#routers.get(command.routerId);
-        if (!routerHolder) {
-            throw Error('Unable to find router');
-        }
-        if (!routerHolder.router) {
-            throw Error('Router closed');
-        }
-        let router = routerHolder.router;
-        let id = randomKey();
-        let appData = command.args.appData || {};
-        let tr = await router.createPlainTransport({
-            listenIp: this.#listenIp.ip,
-            rtcpMux: command.args.rtcpMux,
-            comedia: command.args.comedia,
-            enableSctp: command.args.enableSctp,
-            numSctpStreams: command.args.numSctpStreams,
-            maxSctpMessageSize: command.args.maxSctpMessageSize,
-            sctpSendBufferSize: command.args.sctpSendBufferSize,
-            enableSrtp: command.args.enableSrtp,
-            srtpCryptoSuite: command.args.srtpCryptoSuite,
-            appData: appData
-        });
-        if (!routerHolder.router) {
-            throw Error('Router closed');
-        }
+    #commandPlainTransportCreate = (command: PlainTransportCreateCommand, repeatKey: string) => {
+        return this.#lock.inLock('plain-transport-create-' + repeatKey, async () => {
+            if (this.#plainTransportsRepeatKey.has(repeatKey)) {
+                let id = this.#plainTransportsRepeatKey.get(repeatKey)!;
+                let holder = this.#plainTransports.get(id)!;
+                return this.#getPlainTransportState(id, holder);
+            }
+            let routerHolder = this.#routers.get(command.routerId);
+            if (!routerHolder) {
+                throw Error('Unable to find router');
+            }
+            if (!routerHolder.router) {
+                throw Error('Router closed');
+            }
+            let router = routerHolder.router;
+            let id = randomKey();
+            let appData = command.args.appData || {};
+            let tr = await router.createPlainTransport({
+                listenIp: this.#listenIp.ip,
+                rtcpMux: command.args.rtcpMux,
+                comedia: command.args.comedia,
+                enableSctp: command.args.enableSctp,
+                numSctpStreams: command.args.numSctpStreams,
+                maxSctpMessageSize: command.args.maxSctpMessageSize,
+                sctpSendBufferSize: command.args.sctpSendBufferSize,
+                enableSrtp: command.args.enableSrtp,
+                srtpCryptoSuite: command.args.srtpCryptoSuite,
+                appData: appData
+            });
+            if (!routerHolder.router) {
+                throw Error('Router closed');
+            }
 
-        if (!routerHolder.router) {
-            throw Error('Router closed');
-        }
-        tr.observer.on('close', () => {
-            let holder = this.#plainTransports.get(id)!;
-            this.#onPlainTransportClose(id, holder);
+            if (!routerHolder.router) {
+                throw Error('Router closed');
+            }
+            tr.observer.on('close', () => {
+                let holder = this.#plainTransports.get(id)!;
+                this.#onPlainTransportClose(id, holder);
+            });
+            tr.on('tuple', () => {
+                let holder = this.#plainTransports.get(id)!;
+                holder.tuple = holder.transport!.tuple;
+                this.#reportPlainTransportState(id, holder);
+            });
+            tr.on('rtcptuple', () => {
+                let holder = this.#plainTransports.get(id)!;
+                holder.rtcpTuple = holder.transport!.rtcpTuple ? holder.transport!.rtcpTuple : null;
+                this.#reportPlainTransportState(id, holder);
+            });
+            tr.on('sctpstatechange', () => {
+                let holder = this.#plainTransports.get(id)!;
+                this.#reportPlainTransportState(id, holder);
+            });
+            let holder: PlainTransportHolder = {
+                transport: tr,
+                routerId: command.routerId,
+                appData: appData,
+                tuple: tr.tuple,
+                rtcpTuple: tr.rtcpTuple ? tr.rtcpTuple : null,
+                sctpParameters: tr.sctpParameters ? tr.sctpParameters : null,
+                srtpParameters: tr.srtpParameters ? tr.srtpParameters : null,
+                connectCalled: false
+            };
+            this.#plainTransportsRepeatKey.set(repeatKey, id);
+            this.#plainTransports.set(id, holder);
+            return this.#getPlainTransportState(id, holder);
         });
-        tr.on('tuple', () => {
-            let holder = this.#plainTransports.get(id)!;
-            holder.tuple = holder.transport!.tuple;
-            this.#reportPlainTransportState(id, holder);
-        });
-        tr.on('rtcptuple', () => {
-            let holder = this.#plainTransports.get(id)!;
-            holder.rtcpTuple = holder.transport!.rtcpTuple ? holder.transport!.rtcpTuple : null;
-            this.#reportPlainTransportState(id, holder);
-        });
-        tr.on('sctpstatechange', () => {
-            let holder = this.#plainTransports.get(id)!;
-            this.#reportPlainTransportState(id, holder);
-        });
-        let holder: PlainTransportHolder = {
-            transport: tr,
-            routerId: command.routerId,
-            appData: appData,
-            tuple: tr.tuple,
-            rtcpTuple: tr.rtcpTuple ? tr.rtcpTuple : null,
-            sctpParameters: tr.sctpParameters ? tr.sctpParameters : null,
-            srtpParameters: tr.srtpParameters ? tr.srtpParameters : null,
-            connectCalled: false
-        };
-        this.#plainTransportsRepeatKey.set(repeatKey, id);
-        this.#plainTransports.set(id, holder);
-        return this.#getPlainTransportState(id, holder);
     }
 
     #commandPlainTransportConnect = async (command: PlainTransportConnectCommand): Promise<PlainTransportConnectResponse> => {
@@ -663,59 +672,61 @@ export class ServerWorker {
     // Pipe Transport
     //
 
-    #commandPipeTransportCreate = async (command: PipeTransportCreateCommand, repeatKey: string) => {
-        if (this.#pipeTransportsRepeatKey.has(repeatKey)) {
-            let id = this.#pipeTransportsRepeatKey.get(repeatKey)!;
-            let holder = this.#pipeTransports.get(id)!;
-            return this.#getPipeTransportState(id, holder);
-        }
-        let routerHolder = this.#routers.get(command.routerId);
-        if (!routerHolder) {
-            throw Error('Unable to find router');
-        }
-        if (!routerHolder.router) {
-            throw Error('Router closed');
-        }
-        let router = routerHolder.router;
-        let id = randomKey();
-        let appData = command.args.appData || {};
-        let tr = await router.createPipeTransport({
-            listenIp: this.#listenIp.ip,
-            enableSctp: command.args.enableSctp,
-            numSctpStreams: command.args.numSctpStreams,
-            maxSctpMessageSize: command.args.maxSctpMessageSize,
-            sctpSendBufferSize: command.args.sctpSendBufferSize,
-            enableRtx: command.args.enableRtx,
-            enableSrtp: command.args.enableSrtp,
-            appData: appData
-        });
-        if (!routerHolder.router) {
-            throw Error('Router closed');
-        }
+    #commandPipeTransportCreate = (command: PipeTransportCreateCommand, repeatKey: string) => {
+        return this.#lock.inLock('pipe-transport-create-' + repeatKey, async () => {
+            if (this.#pipeTransportsRepeatKey.has(repeatKey)) {
+                let id = this.#pipeTransportsRepeatKey.get(repeatKey)!;
+                let holder = this.#pipeTransports.get(id)!;
+                return this.#getPipeTransportState(id, holder);
+            }
+            let routerHolder = this.#routers.get(command.routerId);
+            if (!routerHolder) {
+                throw Error('Unable to find router');
+            }
+            if (!routerHolder.router) {
+                throw Error('Router closed');
+            }
+            let router = routerHolder.router;
+            let id = randomKey();
+            let appData = command.args.appData || {};
+            let tr = await router.createPipeTransport({
+                listenIp: this.#listenIp.ip,
+                enableSctp: command.args.enableSctp,
+                numSctpStreams: command.args.numSctpStreams,
+                maxSctpMessageSize: command.args.maxSctpMessageSize,
+                sctpSendBufferSize: command.args.sctpSendBufferSize,
+                enableRtx: command.args.enableRtx,
+                enableSrtp: command.args.enableSrtp,
+                appData: appData
+            });
+            if (!routerHolder.router) {
+                throw Error('Router closed');
+            }
 
-        if (!routerHolder.router) {
-            throw Error('Router closed');
-        }
-        tr.observer.on('close', () => {
-            let holder = this.#pipeTransports.get(id)!;
-            this.#onPipeTransportClose(id, holder);
+            if (!routerHolder.router) {
+                throw Error('Router closed');
+            }
+            tr.observer.on('close', () => {
+                let holder = this.#pipeTransports.get(id)!;
+                this.#onPipeTransportClose(id, holder);
+            });
+            tr.on('sctpstatechange', () => {
+                let holder = this.#pipeTransports.get(id)!;
+                this.#reportPipeTransportState(id, holder);
+            });
+            let holder: PipeTransportHolder = {
+                transport: tr,
+                routerId: command.routerId,
+                appData: appData,
+                tuple: tr.tuple,
+                sctpParameters: tr.sctpParameters ? tr.sctpParameters : null,
+                srtpParameters: tr.srtpParameters ? tr.srtpParameters : null,
+                connectCalled: false
+            };
+            this.#pipeTransportsRepeatKey.set(repeatKey, id);
+            this.#pipeTransports.set(id, holder);
+            return this.#getPipeTransportState(id, holder);
         });
-        tr.on('sctpstatechange', () => {
-            let holder = this.#pipeTransports.get(id)!;
-            this.#reportPipeTransportState(id, holder);
-        });
-        let holder: PipeTransportHolder = {
-            transport: tr,
-            routerId: command.routerId,
-            appData: appData,
-            tuple: tr.tuple,
-            sctpParameters: tr.sctpParameters ? tr.sctpParameters : null,
-            srtpParameters: tr.srtpParameters ? tr.srtpParameters : null,
-            connectCalled: false
-        };
-        this.#pipeTransportsRepeatKey.set(repeatKey, id);
-        this.#pipeTransports.set(id, holder);
-        return this.#getPipeTransportState(id, holder);
     }
 
     #commandPipeTransportConnect = async (command: PipeTransportConnectCommand): Promise<PipeTransportConnectResponse> => {

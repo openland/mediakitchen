@@ -163,3 +163,7 @@ export {
 export {
     now
 } from './utils/time';
+export {
+    AsyncLock,
+    AsyncLockMap
+} from './utils/AsyncLock';
