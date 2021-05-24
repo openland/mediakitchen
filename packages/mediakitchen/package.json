@@ -12,6 +12,6 @@
     "build": "yarn clean && yarn build"
   },
   "dependencies": {
-    "mediakitchen-common": "2.0.0"
+    "mediakitchen-common": "2.0.3"
   }
 }
