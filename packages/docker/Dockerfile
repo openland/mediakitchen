@@ -1,4 +1,4 @@
-FROM node:10 AS stage-one
+FROM node:14 AS stage-one
 
 # Install DEB dependencies and others.
 RUN \
