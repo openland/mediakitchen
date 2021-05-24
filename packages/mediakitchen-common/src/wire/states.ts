@@ -10,7 +10,7 @@ import {
     transportTupleCodec,
     srtpParametersCodec,
     sctpParametersCodec,
-    srtpStateCodec
+    sctpStateCodec
 } from './common';
 
 export const routerStateCodec = t.type({
@@ -42,7 +42,7 @@ export const plainTransportStateCodec = t.type({
     tuple: transportTupleCodec,
     rtcpTuple: t.union([transportTupleCodec, t.null]),
     sctpParameters: t.union([sctpParametersCodec, t.null]),
-    sctpState: t.union([srtpStateCodec, t.null]),
+    sctpState: t.union([sctpStateCodec, t.null]),
     srtpParameters: t.union([srtpParametersCodec, t.null]),
     time: t.number
 });
@@ -54,7 +54,7 @@ export const pipeTransportStateCodec = t.type({
     appData: simpleMapCodec,
     tuple: transportTupleCodec,
     sctpParameters: t.union([sctpParametersCodec, t.null]),
-    sctpState: t.union([srtpStateCodec, t.null]),
+    sctpState: t.union([sctpStateCodec, t.null]),
     srtpParameters: t.union([srtpParametersCodec, t.null]),
     time: t.number
 });

@@ -1,11 +1,14 @@
+import { KitchenTransportPipe } from './KitchenTransportPipe';
 import {
     RouterState, WebRtcTransportState, ProducerState, ConsumerState,
-    RouterCreateCommand, SimpleMap,backoff
+    RouterCreateCommand, SimpleMap, backoff, PlainTransportState, PipeTransportState
 } from 'mediakitchen-common';
 import { Worker } from '../Worker';
 import { KitchenApi } from './KitchenApi';
 import { KitchenRouter } from './KitchenRouter';
 import { KitchenCluster } from './KitchenCluster';
+import { KitchenTransportWebRTC } from './KitchenTransportWebRTC';
+import { KitchenTransportPlain } from './KitchenTransportPlain';
 
 export class KitchenWorker {
 
@@ -31,6 +34,10 @@ export class KitchenWorker {
                 this.#onRouterState(e.state);
             } else if (e.type === 'state-webrtc-transport') {
                 this.#onWebRtcTransportState(e.routerId, e.state);
+            } else if (e.type === 'state-plain-transport') {
+                this.#onPlainTransportState(e.routerId, e.state);
+            } else if (e.type === 'state-pipe-transport') {
+                this.#onPipeTransportState(e.routerId, e.state);
             } else if (e.type === 'state-consumer') {
                 this.#onConsumerState(e.routerId, e.transportId, e.state);
             } else if (e.type === 'state-producer') {
@@ -165,7 +172,35 @@ export class KitchenWorker {
         let r = this.#routers.get(routerId);
         if (r) {
             let tr = r.transports.get(state.id);
-            if (tr) {
+            if (tr && tr instanceof KitchenTransportWebRTC) {
+                tr.applyState(state);
+            }
+        }
+    }
+
+    #onPlainTransportState = (routerId: string, state: PlainTransportState) => {
+        if (this.#status === 'dead') {
+            return;
+        }
+
+        let r = this.#routers.get(routerId);
+        if (r) {
+            let tr = r.transports.get(state.id);
+            if (tr && tr instanceof KitchenTransportPlain) {
+                tr.applyState(state);
+            }
+        }
+    }
+
+    #onPipeTransportState = (routerId: string, state: PipeTransportState) => {
+        if (this.#status === 'dead') {
+            return;
+        }
+
+        let r = this.#routers.get(routerId);
+        if (r) {
+            let tr = r.transports.get(state.id);
+            if (tr && tr instanceof KitchenTransportPipe) {
                 tr.applyState(state);
             }
         }

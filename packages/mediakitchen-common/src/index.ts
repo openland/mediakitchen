@@ -17,7 +17,7 @@ export {
     SimpleMap,
     SctpParameters,
     SrtpParameters,
-    SrtpState,
+    SctpState,
     TransportTuple,
     NumSctpStreams,
     simpleMapCodec,
@@ -39,7 +39,7 @@ export {
     transportTupleCodec,
     sctpParametersCodec,
     srtpParametersCodec,
-    srtpStateCodec,
+    sctpStateCodec,
     numSctpStreamsCodec
 } from './wire/common';
 export {
@@ -55,6 +55,10 @@ export {
     RouterState,
     webRtcTransportStateCodec,
     WebRtcTransportState,
+    pipeTransportStateCodec,
+    PipeTransportState,
+    plainTransportStateCodec,
+    PlainTransportState,
     producerStateCodec,
     ProducerState,
     consumerStateCodec,

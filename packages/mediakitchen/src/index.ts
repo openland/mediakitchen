@@ -24,3 +24,4 @@ export { Router } from './Router';
 export { Producer } from './Producer';
 export { Consumer } from './Consumer';
 export { WebRtcTransport } from './WebRtcTransport';
+export { PlainTransport } from './PlainTransport';

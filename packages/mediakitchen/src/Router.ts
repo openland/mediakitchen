@@ -1,4 +1,4 @@
-import { WebRTCTransportCreateCommand } from 'mediakitchen-common';
+import { PlainTransportCreateCommand, WebRTCTransportCreateCommand, PipeTransportCreateCommand } from 'mediakitchen-common';
 import { KitchenRouter } from './model/KitchenRouter';
 export class Router {
     #router: KitchenRouter
@@ -24,7 +24,19 @@ export class Router {
         return (await this.#router.createWebRTCTransport(args, retryKey)).facade;
     }
 
+    async createPlainTransport(args: PlainTransportCreateCommand['args'], retryKey: string) {
+        return (await this.#router.createPlainTransport(args, retryKey)).facade;
+    }
+
+    async createPipeTransport(args: PipeTransportCreateCommand['args'], retryKey: string) {
+        return (await this.#router.createPipeTransport(args, retryKey)).facade;
+    }
+
     async close() {
         await this.#router.close();
+    }
+
+    toString() {
+        return `Router{id:${this.id},closed:${this.closed},appData:${JSON.stringify(this.appData)}}`;
     }
 }

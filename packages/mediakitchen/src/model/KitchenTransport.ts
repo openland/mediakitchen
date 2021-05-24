@@ -1,21 +1,14 @@
 import {
-    IceCandidate,
-    DtlsState,
-    IceState,
-    WebRtcTransportState,
     ProduceCommand,
     ConsumeCommand,
     SimpleMap,
-    DtlsParameters,
-    IceParameters,
     backoff
 } from 'mediakitchen-common';
-import { WebRtcTransport } from '../WebRtcTransport';
 import { KitchenConsumer } from './KitchenConsumer';
 import { KitchenProducer } from './KitchenProducer';
 import { KitchenApi } from './KitchenApi';
 
-export class KitchenWebRtcTransport {
+export abstract class KitchenTransport<T extends { appData: any, closed: boolean, time: number }> {
     id: string;
     appData: SimpleMap;
 
@@ -23,22 +16,14 @@ export class KitchenWebRtcTransport {
     closedExternally: boolean = false;
     lastSeen: number;
 
-    dtlsParameters: DtlsParameters;
-    dtlsState: DtlsState;
-
-    iceParameters: IceParameters;
-    iceCandidates: IceCandidate[];
-    iceState: IceState;
-
     api: KitchenApi;
-    facade: WebRtcTransport;
 
     producers = new Map<string, KitchenProducer>();
     consumers = new Map<string, KitchenConsumer>();
 
     constructor(
         id: string,
-        state: WebRtcTransportState,
+        state: T,
         api: KitchenApi
     ) {
         this.id = id;
@@ -47,26 +32,6 @@ export class KitchenWebRtcTransport {
 
         this.closed = state.closed;
         this.lastSeen = state.time;
-
-        this.dtlsParameters = state.dtlsParameters;
-        this.dtlsState = state.dtlsState;
-
-        this.iceParameters = state.iceParameters;
-        this.iceCandidates = state.iceCandidates;
-        this.iceState = state.iceState;
-
-        this.facade = new WebRtcTransport(this);
-    }
-
-    async connect(args: { dtlsParameters: DtlsParameters }) {
-        if (this.closed) {
-            throw Error('Transport already closed');
-        }
-        let r = await this.api.connectWebRtcTransport({ id: this.id, dtlsParameters: args.dtlsParameters });
-        if (this.closed) {
-            throw Error('Transport already closed');
-        }
-        this.applyState(r);
     }
 
     async produce(args: ProduceCommand['args'], retryKey: string) {
@@ -98,8 +63,7 @@ export class KitchenWebRtcTransport {
     async close() {
         if (!this.closed) {
             this.closed = true;
-            this.dtlsState = 'closed';
-            this.iceState = 'closed';
+            this.applyClosed();
             for (let p of this.producers.values()) {
                 p.onClosed();
             }
@@ -110,12 +74,12 @@ export class KitchenWebRtcTransport {
                 if (this.closedExternally) {
                     return;
                 }
-                await this.api.closeWebRtcTransport(this.id)
+                await this.invokeClose();
             });
         }
     }
 
-    applyState(state: WebRtcTransportState) {
+    applyState(state: T) {
         if (this.closed) {
             return;
         }
@@ -124,9 +88,9 @@ export class KitchenWebRtcTransport {
         }
 
         this.closed = state.closed;
-        this.dtlsState = state.dtlsState;
-        this.iceState = state.iceState;
+        this.applyStateInternal(state);
         if (this.closed) {
+            this.applyClosed();
             this.onClosed();
         }
     }
@@ -135,9 +99,7 @@ export class KitchenWebRtcTransport {
         this.closedExternally = true;
         if (!this.closed) {
             this.closed = true;
-            this.dtlsState = 'closed';
-            this.iceState = 'closed';
-
+            this.applyClosed();
             for (let p of this.producers.values()) {
                 p.onClosed();
             }
@@ -146,4 +108,8 @@ export class KitchenWebRtcTransport {
             }
         }
     }
+
+    protected abstract applyStateInternal(state: T): void;
+    protected abstract applyClosed(): void;
+    protected abstract invokeClose(): Promise<void>;
 }

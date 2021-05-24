@@ -28,4 +28,8 @@ export class Worker {
     kill() {
         return this.#worker.kill();
     }
+
+    toString() {
+        return `Worker{id:${this.id},status:${this.status},appData:${JSON.stringify(this.appData)}}`;
+    }
 }

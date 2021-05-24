@@ -178,10 +178,10 @@ export const srtpParametersCodec = t.type({
 });
 export type SrtpParameters = t.TypeOf<typeof srtpParametersCodec>;
 
-// SRTP State
+// SCTP State
 
-export const srtpStateCodec = t.union([t.literal('new'), t.literal('connecting'), t.literal('connected'), t.literal('failed'), t.literal('failed'), t.literal('closed')]);
-export type SrtpState = t.TypeOf<typeof srtpStateCodec>;
+export const sctpStateCodec = t.union([t.literal('new'), t.literal('connecting'), t.literal('connected'), t.literal('failed'), t.literal('failed'), t.literal('closed')]);
+export type SctpState = t.TypeOf<typeof sctpStateCodec>;
 
 // NumSctpStreams
 export const numSctpStreamsCodec = t.type({

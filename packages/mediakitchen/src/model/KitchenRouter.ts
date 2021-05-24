@@ -2,11 +2,16 @@ import {
     RouterState,
     SimpleMap,
     WebRTCTransportCreateCommand,
-    backoff
+    backoff,
+    PlainTransportCreateCommand,
+    PipeTransportCreateCommand
 } from 'mediakitchen-common';
 import { Router } from '../Router';
-import { KitchenWebRtcTransport } from './KitchentWebRtcTransport';
 import { KitchenApi } from './KitchenApi';
+import { KitchenTransport } from './KitchenTransport';
+import { KitchenTransportPipe } from './KitchenTransportPipe';
+import { KitchenTransportPlain } from './KitchenTransportPlain';
+import { KitchenTransportWebRTC } from './KitchenTransportWebRTC';
 
 export class KitchenRouter {
     id: string;
@@ -15,10 +20,10 @@ export class KitchenRouter {
     closedExternally: boolean = false;
     lastSeen: number;
 
-    api: KitchenApi
+    api: KitchenApi;
     facade: Router;
 
-    transports = new Map<string, KitchenWebRtcTransport>();
+    transports = new Map<string, KitchenTransport<any>>();
 
     constructor(id: string, state: RouterState, api: KitchenApi) {
         this.id = id;
@@ -35,9 +40,43 @@ export class KitchenRouter {
         if (this.transports.has(res.id)) {
             let r = this.transports.get(res.id)!;
             r.applyState(res);
-            return r;
+            return r as KitchenTransportWebRTC;
         } else {
-            let ts = new KitchenWebRtcTransport(
+            let ts = new KitchenTransportWebRTC(
+                res.id,
+                res,
+                this.api
+            );
+            this.transports.set(res.id, ts);
+            return ts;
+        }
+    }
+
+    async createPlainTransport(args: PlainTransportCreateCommand['args'], retryKey: string) {
+        let res = await this.api.createPlainTransport(this.id, args, retryKey);
+        if (this.transports.has(res.id)) {
+            let r = this.transports.get(res.id)!;
+            r.applyState(res);
+            return r as KitchenTransportPlain;
+        } else {
+            let ts = new KitchenTransportPlain(
+                res.id,
+                res,
+                this.api
+            );
+            this.transports.set(res.id, ts);
+            return ts;
+        }
+    }
+
+    async createPipeTransport(args: PipeTransportCreateCommand['args'], retryKey: string) {
+        let res = await this.api.createPipeTransport(this.id, args, retryKey);
+        if (this.transports.has(res.id)) {
+            let r = this.transports.get(res.id)!;
+            r.applyState(res);
+            return r as KitchenTransportPipe;
+        } else {
+            let ts = new KitchenTransportPipe(
                 res.id,
                 res,
                 this.api

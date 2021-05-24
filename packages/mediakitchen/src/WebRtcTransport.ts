@@ -1,13 +1,17 @@
 import { ProduceCommand, ConsumeCommand } from 'mediakitchen-common';
 import { DtlsParameters } from 'mediakitchen-common';
-import { KitchenWebRtcTransport } from './model/KitchentWebRtcTransport';
+import { KitchenTransportWebRTC } from './model/KitchenTransportWebRTC';
 
 export class WebRtcTransport {
-    #transport: KitchenWebRtcTransport
+    #transport: KitchenTransportWebRTC
 
-    constructor(transport: KitchenWebRtcTransport) {
+    constructor(transport: KitchenTransportWebRTC) {
         this.#transport = transport;
         Object.freeze(this);
+    }
+
+    get id() {
+        return this.#transport.id;
     }
 
     get closed() {
@@ -34,8 +38,16 @@ export class WebRtcTransport {
         return this.#transport.iceState;
     }
 
+    get appData() {
+        return this.#transport.appData;
+    }
+
     async connect(args: { dtlsParameters: DtlsParameters }) {
         await this.#transport.connect(args);
+    }
+
+    async restartIce() {
+        await this.#transport.restartIce();
     }
 
     async produce(args: ProduceCommand['args'], retryKey: string) {
@@ -48,5 +60,9 @@ export class WebRtcTransport {
 
     async close() {
         await this.#transport.close();
+    }
+
+    toString() {
+        return `WebRTCTransport{id:${this.id},closed:${this.closed},appData:${JSON.stringify(this.appData)}}`;
     }
 }
