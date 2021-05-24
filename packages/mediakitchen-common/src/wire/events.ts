@@ -1,6 +1,6 @@
 import * as t from 'io-ts';
 import { simpleMapCodec } from './common';
-import { routerStateCodec, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec, plainTransportStateCodec } from './states';
+import { routerStateCodec, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec, plainTransportStateCodec, pipeTransportStateCodec } from './states';
 
 //
 // State Updates
@@ -32,6 +32,15 @@ const plainTransportStateEvent = t.type({
     time: t.number
 });
 
+const pipeTransportStateEvent = t.type({
+    type: t.literal('state-pipe-transport'),
+    state: pipeTransportStateCodec,
+    transportId: t.string,
+    routerId: t.string,
+    workerId: t.string,
+    time: t.number
+});
+
 const producerStateEvent = t.type({
     type: t.literal('state-producer'),
     state: producerStateCodec,
@@ -57,6 +66,7 @@ export const eventsCodec = t.union([
     routerStateEvent,
     webRtcTransportStateEvent,
     plainTransportStateEvent,
+    pipeTransportStateEvent,
     producerStateEvent,
     consumerStateEvent
 ]);

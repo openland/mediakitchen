@@ -1,7 +1,7 @@
 import * as t from 'io-ts';
 import { eventsCodec } from './events';
-import { simpleMapCodec, dtlsParametersCodec, rtpParametersCodec, rtpCodecCapabilityCodec, rtpCapabilitiesCodec, NumSctpStreamsCodec, SrtpParametersCodec } from './common';
-import { routerStateCodec, RouterState, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec, plainTransportStateCodec } from './states';
+import { simpleMapCodec, dtlsParametersCodec, rtpParametersCodec, rtpCodecCapabilityCodec, rtpCapabilitiesCodec, numSctpStreamsCodec, srtpParametersCodec } from './common';
+import { routerStateCodec, RouterState, webRtcTransportStateCodec, producerStateCodec, consumerStateCodec, plainTransportStateCodec, pipeTransportStateCodec } from './states';
 
 //
 // Kill Worker
@@ -143,7 +143,7 @@ const plainTransportCreateCommandCodec = t.type({
         rtcpMux: t.boolean,
         comedia: t.boolean,
         enableSctp: t.boolean,
-        numSctpStreams: NumSctpStreamsCodec,
+        numSctpStreams: numSctpStreamsCodec,
         maxSctpMessageSize: t.number,
         sctpSendBufferSize: t.number,
         enableSrtp: t.boolean,
@@ -168,7 +168,7 @@ const plainTransportConnectCommandCodec = t.type({
         ip: t.string,
         port: t.number,
         rtcpPort: t.number,
-        srtpParameters: SrtpParametersCodec
+        srtpParameters: srtpParametersCodec
     })])
 });
 export type PlainTransportConnectCommand = t.TypeOf<typeof plainTransportConnectCommandCodec>;
@@ -190,6 +190,64 @@ export type PlainTransportCloseCommand = t.TypeOf<typeof plainTransportCloseComm
 
 export const plainTransportCloseResponseCodec = plainTransportStateCodec;
 export type PlainTransportCloseResponse = t.TypeOf<typeof plainTransportStateCodec>;
+
+//
+// Create Pipe Transport Command
+//
+
+const pipeTransportCreateCommandCodec = t.type({
+    type: t.literal('transport-pipe-create'),
+    routerId: t.string,
+    args: t.intersection([t.type({
+        listenIp: t.string
+    }), t.partial({
+        enableSctp: t.boolean,
+        numSctpStreams: numSctpStreamsCodec,
+        maxSctpMessageSize: t.number,
+        sctpSendBufferSize: t.number,
+        enableRtx: t.boolean,
+        enableSrtp: t.boolean,
+        appData: simpleMapCodec
+    })])
+});
+export type PipeTransportCreateCommand = t.TypeOf<typeof pipeTransportCreateCommandCodec>;
+
+export const pipeTransportCreateResponseCodec = pipeTransportStateCodec;
+export type PipeTransportCreateResponse = t.TypeOf<typeof pipeTransportCreateResponseCodec>;
+
+//
+// Close Pipe Transport Command
+//
+
+const pipeTransportCloseCommandCodec = t.type({
+    type: t.literal('transport-pipe-close'),
+    args: t.type({
+        id: t.string,
+    })
+});
+export type PipeTransportCloseCommand = t.TypeOf<typeof pipeTransportCloseCommandCodec>;
+
+export const pipeTransportCloseResponseCodec = pipeTransportStateCodec;
+export type PipeTransportCloseResponse = t.TypeOf<typeof pipeTransportCloseResponseCodec>;
+
+//
+// Connect Pipe Transport Command
+//
+
+const pipeTransportConnectCommandCodec = t.type({
+    type: t.literal('transport-pipe-connect'),
+    args: t.intersection([t.type({
+        id: t.string,
+        ip: t.string,
+        port: t.number,
+    }), t.partial({
+        srtpParameters: srtpParametersCodec
+    })])
+});
+export type PipeTransportConnectCommand = t.TypeOf<typeof pipeTransportConnectCommandCodec>;
+
+export const pipeTransportConnectResponseCodec = pipeTransportStateCodec;
+export type PipeTransportConnectResponse = t.TypeOf<typeof pipeTransportConnectResponseCodec>;
 
 //
 // Produce Create Command
@@ -343,6 +401,10 @@ export const commandsCodec = t.union([
     plainTransportCreateCommandCodec,
     plainTransportCloseCommandCodec,
     plainTransportConnectCommandCodec,
+
+    pipeTransportCreateCommandCodec,
+    pipeTransportCloseCommandCodec,
+    pipeTransportConnectCommandCodec,
 
     produceCommandCodec,
     producePauseCommandCodec,

@@ -1,5 +1,5 @@
-import { PlainTransportState } from './../../mediakitchen-common/src/wire/states';
-import { PlainTransportCreateCommand, PlainTransportCloseCommand, PlainTransportCloseResponse, PlainTransportConnectCommand, PlainTransportConnectResponse } from './../../mediakitchen-common/src/wire/commands';
+import { PlainTransportState, PipeTransportState } from './../../mediakitchen-common/src/wire/states';
+import { PlainTransportCreateCommand, PlainTransportCloseCommand, PlainTransportCloseResponse, PlainTransportConnectCommand, PlainTransportConnectResponse, PipeTransportCreateCommand, PipeTransportCloseCommand, PipeTransportCloseResponse, PipeTransportConnectResponse, PipeTransportConnectCommand } from './../../mediakitchen-common/src/wire/commands';
 import * as nats from 'ts-nats';
 import * as mediasoup from 'mediasoup';
 import debug from 'debug';
@@ -74,6 +74,14 @@ interface PlainTransportHolder {
     transport: mediasoup.types.PlainTransport | null;
 }
 
+interface PipeTransportHolder {
+    routerId: string;
+    appData: SimpleMap;
+    tuple: TransportTuple;
+    connectCalled: boolean;
+    transport: mediasoup.types.PipeTransport | null;
+}
+
 interface ProducerHolder {
     routerId: string;
     transportId: string;
@@ -123,9 +131,10 @@ export class ServerWorker {
 
     #webRtcTransports = new Map<string, WebRtcTransportHolder>();
     #webRtcTransportsRepeatKey = new Map<string, string>();
-
     #plainTransports = new Map<string, PlainTransportHolder>();
     #plainTransportsRepeatKey = new Map<string, string>();
+    #pipeTransports = new Map<string, PipeTransportHolder>();
+    #pipeTransportsRepeatKey = new Map<string, string>();
 
     #producers = new Map<string, ProducerHolder>();
     #producersRepeatKey = new Map<string, string>();
@@ -169,6 +178,12 @@ export class ServerWorker {
             return this.#commandPlainTransportClose(command);
         } else if (command.type === 'transport-plain-connect') {
             return this.#commandPlainTransportConnect(command);
+        } else if (command.type === 'transport-pipe-create') {
+            return this.#commandPipeTransportCreate(command, repeatKey);
+        } else if (command.type === 'transport-pipe-close') {
+            return this.#commandPipeTransportClose(command);
+        } else if (command.type === 'transport-pipe-connect') {
+            return this.#commandPipeTransportConnect(command);
         } else if (command.type === 'produce-create') {
             return this.#commandProduceCreate(command, repeatKey);
         } else if (command.type === 'produce-pause') {
@@ -597,6 +612,131 @@ export class ServerWorker {
     }
 
     //
+    // Pipe Transport
+    //
+
+    #commandPipeTransportCreate = async (command: PipeTransportCreateCommand, repeatKey: string) => {
+        if (this.#plainTransportsRepeatKey.has(repeatKey)) {
+            let id = this.#plainTransportsRepeatKey.get(repeatKey)!;
+            let holder = this.#plainTransports.get(id)!;
+            return this.#getPlainTransportState(id, holder);
+        }
+        let routerHolder = this.#routers.get(command.routerId);
+        if (!routerHolder) {
+            throw Error('Unable to find router');
+        }
+        if (!routerHolder.router) {
+            throw Error('Router closed');
+        }
+        let router = routerHolder.router;
+        let id = randomKey();
+        let appData = command.args.appData || {};
+        let tr = await router.createPipeTransport({
+            listenIp: command.args.listenIp,
+            enableSctp: command.args.enableSctp,
+            numSctpStreams: command.args.numSctpStreams,
+            maxSctpMessageSize: command.args.maxSctpMessageSize,
+            sctpSendBufferSize: command.args.sctpSendBufferSize,
+            enableRtx: command.args.enableRtx,
+            enableSrtp: command.args.enableSrtp,
+            appData: appData
+        });
+        if (!routerHolder.router) {
+            throw Error('Router closed');
+        }
+
+        if (!routerHolder.router) {
+            throw Error('Router closed');
+        }
+        tr.observer.on('close', () => {
+            let holder = this.#pipeTransports.get(id)!;
+            this.#onPipeTransportClose(id, holder);
+        });
+        tr.on('sctpstatechange', () => {
+            let holder = this.#pipeTransports.get(id)!;
+            this.#reportPipeTransportState(id, holder);
+        });
+        let holder: PipeTransportHolder = {
+            transport: tr,
+            routerId: command.routerId,
+            appData: appData,
+            tuple: tr.tuple,
+            connectCalled: false
+        };
+        this.#pipeTransportsRepeatKey.set(repeatKey, id);
+        this.#pipeTransports.set(id, holder);
+        return this.#getPipeTransportState(id, holder);
+    }
+
+    #commandPipeTransportConnect = async (command: PipeTransportConnectCommand): Promise<PipeTransportConnectResponse> => {
+        let holder = this.#pipeTransports.get(command.args.id);
+        if (!holder) {
+            throw Error('Unable to find transport');
+        }
+        if (!holder.transport) {
+            return this.#getPipeTransportState(command.args.id, holder);
+        }
+
+        // Connect
+        if (!holder.connectCalled) {
+            holder.connectCalled = true;
+            await holder.transport.connect({
+                ip: command.args.ip,
+                port: command.args.port,
+                srtpParameters: command.args.srtpParameters
+            });
+        }
+
+        return this.#getPipeTransportState(command.args.id, holder);
+    };
+
+    #commandPipeTransportClose = async (command: PipeTransportCloseCommand): Promise<PipeTransportCloseResponse> => {
+        let holder = this.#pipeTransports.get(command.args.id);
+        if (!holder) {
+            throw Error('Unable to find transport');
+        }
+        if (!holder.transport) {
+            return this.#getPipeTransportState(command.args.id, holder);
+        }
+
+        // Close Transport
+        holder.transport.close();
+        this.#onPipeTransportClose(command.args.id, holder);
+        return this.#getPipeTransportState(command.args.id, holder);
+    };
+
+    #getPipeTransportState = (id: string, holder: PipeTransportHolder): PipeTransportState => {
+        return {
+            id,
+            closed: !holder.transport,
+            tuple: holder.tuple,
+            srtpParameters: holder.transport && holder.transport.srtpParameters ? holder.transport.srtpParameters : null,
+            appData: holder.appData,
+            time: now()
+        }
+    }
+
+    #onPipeTransportClose = (id: string, holder: PipeTransportHolder) => {
+        if (holder.transport) {
+            holder.transport = null;
+            this.#reportPipeTransportState(id, holder);
+        }
+    }
+
+    #reportPipeTransportState = (id: string, holder: PipeTransportHolder) => {
+        let state = this.#getPipeTransportState(id, holder);
+        this.#loggerInfo('Transport: ' + JSON.stringify(state));
+        this.#doEvent({
+            type: 'state-pipe-transport',
+            state,
+            transportId: id,
+            routerId: holder.routerId,
+            workerId: this.#id,
+            time: now(),
+        });
+    }
+
+    //
     // Producer
     //
 
@@ -608,7 +748,7 @@ export class ServerWorker {
         }
 
         // Find transport
-        let transportHolder = this.#webRtcTransports.get(command.transportId) || this.#plainTransports.get(command.transportId);
+        let transportHolder = this.#webRtcTransports.get(command.transportId) || this.#plainTransports.get(command.transportId) || this.#pipeTransports.get(command.transportId);
         if (transportHolder) {
             if (!transportHolder.transport) {
                 throw Error('Transport closed');
@@ -735,24 +875,24 @@ export class ServerWorker {
             return this.#getConsumerState(id, holder);
         }
 
-        let transport = this.#webRtcTransports.get(command.transportId);
-        if (!transport) {
+        let transportHolder = this.#webRtcTransports.get(command.transportId) || this.#plainTransports.get(command.transportId) || this.#pipeTransports.get(command.transportId);
+        if (!transportHolder) {
             throw Error('Unable to find transport');
         }
         let producer = this.#producers.get(command.producerId);
         if (!producer) {
             throw Error('Unable to find producer');
         }
-        if (!transport.transport) {
+        if (!transportHolder.transport) {
             throw Error('Transport closed');
         }
         if (!producer.producer) {
             throw Error('Producer closed');
         }
 
-        let consumer = await transport.transport.consume({ producerId: producer.producer.id, ...command.args });
+        let consumer = await transportHolder.transport.consume({ producerId: producer.producer.id, ...command.args });
 
-        if (!transport.transport) {
+        if (!transportHolder.transport) {
             throw Error('Transport closed');
         }
         if (!producer.producer) {
@@ -773,7 +913,7 @@ export class ServerWorker {
             this.#reportConsumerState(id, holder);
         });
         let holder: ConsumerHolder = {
-            routerId: transport.routerId,
+            routerId: transportHolder.routerId,
             transportId: command.transportId,
             producerId: command.producerId,
             consumer: consumer,

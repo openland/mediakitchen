@@ -162,30 +162,30 @@ export type TransportTuple = t.TypeOf<typeof transportTupleCodec>;
 
 // SCTP Parameters
 
-export const SctpParametersCodec = t.type({
+export const sctpParametersCodec = t.type({
     port: t.number,
     OS: t.number,
     MIS: t.number,
     maxMessageSize: t.number
 });
-export type SctpParameters = t.TypeOf<typeof SctpParametersCodec>;
+export type SctpParameters = t.TypeOf<typeof sctpParametersCodec>;
 
 // SRTP Parameters
 
-export const SrtpParametersCodec = t.type({
+export const srtpParametersCodec = t.type({
     cryptoSuite: t.union([t.literal('AES_CM_128_HMAC_SHA1_80'), t.literal('AES_CM_128_HMAC_SHA1_32')]),
     keyBase64: t.string
 });
-export type SrtpParameters = t.TypeOf<typeof SrtpParametersCodec>;
+export type SrtpParameters = t.TypeOf<typeof srtpParametersCodec>;
 
 // SRTP State
 
-export const SrtpStateCodec = t.union([t.literal('new'), t.literal('connecting'), t.literal('connected'), t.literal('failed'), t.literal('failed'), t.literal('closed')]);
-export type SrtpState = t.TypeOf<typeof SrtpStateCodec>;
+export const srtpStateCodec = t.union([t.literal('new'), t.literal('connecting'), t.literal('connected'), t.literal('failed'), t.literal('failed'), t.literal('closed')]);
+export type SrtpState = t.TypeOf<typeof srtpStateCodec>;
 
 // NumSctpStreams
-export const NumSctpStreamsCodec = t.type({
+export const numSctpStreamsCodec = t.type({
     OS: t.number,
     MIS: t.number
 });
-export type NumSctpStreams =t.TypeOf<typeof NumSctpStreamsCodec>;
+export type NumSctpStreams = t.TypeOf<typeof numSctpStreamsCodec>;

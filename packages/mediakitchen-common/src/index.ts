@@ -37,10 +37,10 @@ export {
     rtpParametersCodec,
     rtpCapabilitiesCodec,
     transportTupleCodec,
-    SctpParametersCodec,
-    SrtpParametersCodec,
-    SrtpStateCodec,
-    NumSctpStreamsCodec
+    sctpParametersCodec,
+    srtpParametersCodec,
+    srtpStateCodec,
+    numSctpStreamsCodec
 } from './wire/common';
 export {
     eventsCodec,
@@ -96,6 +96,16 @@ export {
     WebRTCTransportConnectCommand,
     WebRTCTransportConnectResponse,
     webRtcTransportConnectResponseCodec,
+
+    PipeTransportCreateCommand,
+    PipeTransportCreateResponse,
+    pipeTransportCreateResponseCodec,
+    PipeTransportCloseCommand,
+    PipeTransportCloseResponse,
+    pipeTransportCloseResponseCodec,
+    PipeTransportConnectCommand,
+    PipeTransportConnectResponse,
+    pipeTransportConnectResponseCodec,
 
     ProduceCommand,
     ProduceResponse,
