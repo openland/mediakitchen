@@ -1,4 +1,3 @@
-import { PlainTransportConnectCommand } from './../../../mediakitchen-common/src/wire/commands';
 import { ConnectionInfo } from '../ConnectionInfo';
 import {
     Commands,
@@ -28,7 +27,14 @@ import {
     backoff,
     PlainTransportCreateCommand,
     plainTransportCreateResponseCodec,
-    plainTransportCloseResponseCodec
+    plainTransportCloseResponseCodec,
+    PipeTransportCreateCommand,
+    PlainTransportConnectCommand,
+    webRtcTransportRestartResponseCodec,
+    pipeTransportCreateResponseCodec,
+    PipeTransportConnectCommand,
+    pipeTransportConnectResponseCodec,
+    pipeTransportCloseResponseCodec
 } from 'mediakitchen-common';
 import * as nats from 'ts-nats';
 import * as t from 'io-ts';
@@ -73,6 +79,10 @@ export class KitchenApi {
         return await this.#doCommand({ type: 'transport-webrtc-connect', args: command }, '', webRtcTransportConnectResponseCodec);
     }
 
+    restartWebRtcTransport = async (id: string) => {
+        return await this.#doCommand({ type: 'transport-webrtc-restart', args: { id } }, '', webRtcTransportRestartResponseCodec);
+    }
+
     closeWebRtcTransport = async (id: string) => {
         return await this.#doCommand({ type: 'transport-webrtc-close', args: { id } }, '', webRtcTransportCloseResponseCodec);
     }
@@ -89,6 +99,20 @@ export class KitchenApi {
 
     closePlainTransport = async (id: string) => {
         return await this.#doCommand({ type: 'transport-plain-close', args: { id } }, '', plainTransportCloseResponseCodec);
+    }
+
+    // Pipe Transport
+
+    createPipeTransport = async (routerId: string, command: PipeTransportCreateCommand['args'], retryKey: string) => {
+        return await this.#doCommand({ type: 'transport-pipe-create', routerId, args: command }, retryKey, pipeTransportCreateResponseCodec);
+    }
+
+    connectPipeTransport = async (command: PipeTransportConnectCommand['args']) => {
+        return await this.#doCommand({ type: 'transport-pipe-connect', args: command }, '', pipeTransportConnectResponseCodec);
+    }
+
+    closePipeTransport = async (id: string) => {
+        return await this.#doCommand({ type: 'transport-pipe-close', args: { id } }, '', pipeTransportCloseResponseCodec);
     }
 
     // Producer

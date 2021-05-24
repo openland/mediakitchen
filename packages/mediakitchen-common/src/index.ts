@@ -96,6 +96,9 @@ export {
     WebRTCTransportConnectCommand,
     WebRTCTransportConnectResponse,
     webRtcTransportConnectResponseCodec,
+    WebRTCTransportRestartCommand,
+    WebRTCTransportRestartResponse,
+    webRtcTransportRestartResponseCodec,
 
     PipeTransportCreateCommand,
     PipeTransportCreateResponse,

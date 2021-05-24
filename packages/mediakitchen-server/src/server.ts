@@ -91,7 +91,7 @@ loggerInfo.log = console.info.bind(console);
         let workers: ServerWorker[] = [];
         async function spawnWorker(index: number) {
             let w = await createWorker({
-                listenIps: [{ ip: listenIp, announcedIp: announce }],
+                listenIp: { ip: listenIp, announcedIp: announce },
                 connectionInfo: { nc, rootTopic },
                 settings: {
                     rtcMaxPort: maxPort,

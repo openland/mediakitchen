@@ -89,8 +89,9 @@ const webRtcTransportCreateCommandCodec = t.type({
         preferTcp: t.boolean,
         initialAvailableOutgoingBitrate: t.number,
         enableSctp: t.boolean,
-        numSctpStreams: t.type({ OS: t.number, MIS: t.number }),
+        numSctpStreams: numSctpStreamsCodec,
         maxSctpMessageSize: t.number,
+        sctpSendBufferSize: t.number,
         appData: simpleMapCodec
     })
 });
@@ -115,6 +116,21 @@ export const webRtcTransportCloseResponseCodec = webRtcTransportStateCodec;
 export type WebRTCTransportCloseResponse = t.TypeOf<typeof webRtcTransportStateCodec>;
 
 //
+// Restart WebRTC Transport Command
+//
+
+const webRtcTransportRestartCommandCodec = t.type({
+    type: t.literal('transport-webrtc-restart'),
+    args: t.type({
+        id: t.string
+    })
+});
+export type WebRTCTransportRestartCommand = t.TypeOf<typeof webRtcTransportRestartCommandCodec>;
+
+export const webRtcTransportRestartResponseCodec = webRtcTransportStateCodec;
+export type WebRTCTransportRestartResponse = t.TypeOf<typeof webRtcTransportRestartResponseCodec>;
+
+//
 // Connect WebRTC Transport Command
 //
 
@@ -137,9 +153,7 @@ export type WebRTCTransportConnectResponse = t.TypeOf<typeof webRtcTransportConn
 const plainTransportCreateCommandCodec = t.type({
     type: t.literal('transport-plain-create'),
     routerId: t.string,
-    args: t.intersection([t.type({
-        listenIp: t.string
-    }), t.partial({
+    args: t.partial({
         rtcpMux: t.boolean,
         comedia: t.boolean,
         enableSctp: t.boolean,
@@ -149,7 +163,7 @@ const plainTransportCreateCommandCodec = t.type({
         enableSrtp: t.boolean,
         srtpCryptoSuite: t.union([t.literal('AES_CM_128_HMAC_SHA1_80'), t.literal('AES_CM_128_HMAC_SHA1_32')]),
         appData: simpleMapCodec
-    })])
+    })
 });
 export type PlainTransportCreateCommand = t.TypeOf<typeof plainTransportCreateCommandCodec>;
 
@@ -198,9 +212,7 @@ export type PlainTransportCloseResponse = t.TypeOf<typeof plainTransportStateCod
 const pipeTransportCreateCommandCodec = t.type({
     type: t.literal('transport-pipe-create'),
     routerId: t.string,
-    args: t.intersection([t.type({
-        listenIp: t.string
-    }), t.partial({
+    args: t.partial({
         enableSctp: t.boolean,
         numSctpStreams: numSctpStreamsCodec,
         maxSctpMessageSize: t.number,
@@ -208,7 +220,7 @@ const pipeTransportCreateCommandCodec = t.type({
         enableRtx: t.boolean,
         enableSrtp: t.boolean,
         appData: simpleMapCodec
-    })])
+    })
 });
 export type PipeTransportCreateCommand = t.TypeOf<typeof pipeTransportCreateCommandCodec>;
 
@@ -397,6 +409,7 @@ export const commandsCodec = t.union([
     webRtcTransportCreateCommandCodec,
     webRtcTransportConnectCommandCodec,
     webRtcTransportCloseCommandCodec,
+    webRtcTransportRestartCommandCodec,
 
     plainTransportCreateCommandCodec,
     plainTransportCloseCommandCodec,

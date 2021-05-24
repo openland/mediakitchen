@@ -3,6 +3,6 @@ import { ConnectionInfo } from './ConnectionInfo';
 
 export interface WorkerOptions {
     connectionInfo: ConnectionInfo;
-    listenIps?: mediasoup.types.TransportListenIp[] | string[];
+    listenIp?: mediasoup.types.TransportListenIp;
     settings?: Partial<mediasoup.types.WorkerSettings>;
 }

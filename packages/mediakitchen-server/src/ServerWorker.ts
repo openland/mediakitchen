@@ -1,5 +1,6 @@
+import { SctpParameters, SrtpParameters, sctpParametersCodec } from './../../mediakitchen-common/src/wire/common';
 import { PlainTransportState, PipeTransportState } from './../../mediakitchen-common/src/wire/states';
-import { PlainTransportCreateCommand, PlainTransportCloseCommand, PlainTransportCloseResponse, PlainTransportConnectCommand, PlainTransportConnectResponse, PipeTransportCreateCommand, PipeTransportCloseCommand, PipeTransportCloseResponse, PipeTransportConnectResponse, PipeTransportConnectCommand } from './../../mediakitchen-common/src/wire/commands';
+import { PlainTransportCreateCommand, PlainTransportCloseCommand, PlainTransportCloseResponse, PlainTransportConnectCommand, PlainTransportConnectResponse, PipeTransportCreateCommand, PipeTransportCloseCommand, PipeTransportCloseResponse, PipeTransportConnectResponse, PipeTransportConnectCommand, WebRTCTransportRestartCommand, WebRTCTransportRestartResponse } from './../../mediakitchen-common/src/wire/commands';
 import * as nats from 'ts-nats';
 import * as mediasoup from 'mediasoup';
 import debug from 'debug';
@@ -70,6 +71,8 @@ interface PlainTransportHolder {
     appData: SimpleMap;
     tuple: TransportTuple;
     rtcpTuple: TransportTuple | null;
+    sctpParameters: SctpParameters | null;
+    srtpParameters: SrtpParameters | null;
     connectCalled: boolean;
     transport: mediasoup.types.PlainTransport | null;
 }
@@ -78,6 +81,8 @@ interface PipeTransportHolder {
     routerId: string;
     appData: SimpleMap;
     tuple: TransportTuple;
+    sctpParameters: SctpParameters | null;
+    srtpParameters: SrtpParameters | null;
     connectCalled: boolean;
     transport: mediasoup.types.PipeTransport | null;
 }
@@ -114,7 +119,7 @@ export class ServerWorker {
     #nc: nats.Client;
     #loggerInfo: debug.Debugger;
     #loggerError: debug.Debugger;
-    #listenIps: { ip: string, announceIp?: string }[] | string[];
+    #listenIp: { ip: string, announceIp?: string };
     #rootTopic: string;
 
     // State
@@ -148,7 +153,7 @@ export class ServerWorker {
         this.#nc = options.connectionInfo.nc;
         this.#loggerInfo = logger;
         this.#loggerError = loggerError;
-        this.#listenIps = options.listenIps || ['127.0.0.1'];
+        this.#listenIp = options.listenIp || { ip: '127.0.0.1' };
         this.#rootTopic = options.connectionInfo.rootTopic || 'mediakitchen';
         this.#init();
     }
@@ -172,6 +177,8 @@ export class ServerWorker {
             return this.#commandWebRTCTransportClose(command);
         } else if (command.type === 'transport-webrtc-connect') {
             return this.#commandWebRTCTransportConnect(command);
+        } else if (command.type === 'transport-webrtc-restart') {
+            return this.#commandWebRTCTransportRestart(command);
         } else if (command.type === 'transport-plain-create') {
             return this.#commandPlainTransportCreate(command, repeatKey);
         } else if (command.type === 'transport-plain-close') {
@@ -346,7 +353,7 @@ export class ServerWorker {
         let id = randomKey();
         let appData = command.args.appData || {};
         let tr = await router.createWebRtcTransport({
-            listenIps: this.#listenIps,
+            listenIps: [this.#listenIp],
             enableUdp: command.args.enableUdp,
             enableTcp: command.args.enableTcp,
             preferUdp: command.args.preferUdp,
@@ -355,6 +362,7 @@ export class ServerWorker {
             enableSctp: command.args.enableSctp,
             numSctpStreams: command.args.numSctpStreams,
             maxSctpMessageSize: command.args.maxSctpMessageSize,
+            sctpSendBufferSize: command.args.sctpSendBufferSize,
             appData: appData
         });
         if (!routerHolder.router) {
@@ -413,6 +421,23 @@ export class ServerWorker {
 
         // Refresh role
         holder.dtlsParameters.role = holder.transport.dtlsParameters.role;
+        this.#reportWebRtcTransportState(command.args.id, holder);
+
+        return this.#getWebRTCTransportState(command.args.id, holder);
+    }
+
+    #commandWebRTCTransportRestart = async (command: WebRTCTransportRestartCommand): Promise<WebRTCTransportRestartResponse> => {
+        let holder = this.#webRtcTransports.get(command.args.id);
+        if (!holder) {
+            throw Error('Unable to find transport ' + command.args.id);
+        }
+        if (!holder.transport) {
+            return this.#getWebRTCTransportState(command.args.id, holder);
+        }
+
+        // Restart
+        await holder.transport.restartIce();
+        holder.iceParameters = holder.transport.iceParameters;
         this.#reportWebRtcTransportState(command.args.id, holder);
 
         return this.#getWebRTCTransportState(command.args.id, holder);
@@ -495,7 +520,7 @@ export class ServerWorker {
         let id = randomKey();
         let appData = command.args.appData || {};
         let tr = await router.createPlainTransport({
-            listenIp: command.args.listenIp,
+            listenIp: this.#listenIp.ip,
             rtcpMux: command.args.rtcpMux,
             comedia: command.args.comedia,
             enableSctp: command.args.enableSctp,
@@ -519,10 +544,12 @@ export class ServerWorker {
         });
         tr.on('tuple', () => {
             let holder = this.#plainTransports.get(id)!;
+            holder.tuple = holder.transport!.tuple;
             this.#reportPlainTransportState(id, holder);
         });
         tr.on('rtcptuple', () => {
             let holder = this.#plainTransports.get(id)!;
+            holder.rtcpTuple = holder.transport!.rtcpTuple ? holder.transport!.rtcpTuple : null;
             this.#reportPlainTransportState(id, holder);
         });
         tr.on('sctpstatechange', () => {
@@ -535,6 +562,8 @@ export class ServerWorker {
             appData: appData,
             tuple: tr.tuple,
             rtcpTuple: tr.rtcpTuple ? tr.rtcpTuple : null,
+            sctpParameters: tr.sctpParameters ? tr.sctpParameters : null,
+            srtpParameters: tr.srtpParameters ? tr.srtpParameters : null,
             connectCalled: false
         };
         this.#plainTransportsRepeatKey.set(repeatKey, id);
@@ -561,6 +590,9 @@ export class ServerWorker {
                 srtpParameters: command.args.srtpParameters
             });
         }
+        holder.tuple = holder.transport.tuple;
+        holder.rtcpTuple = holder.transport.rtcpTuple ? holder.transport.rtcpTuple : null;
+        holder.srtpParameters = holder.transport.srtpParameters ? holder.transport.srtpParameters : null;
 
         return this.#getPlainTransportState(command.args.id, holder);
     };
@@ -586,6 +618,9 @@ export class ServerWorker {
             closed: !holder.transport,
             tuple: holder.tuple,
             rtcpTuple: holder.rtcpTuple,
+            sctpParameters: holder.sctpParameters,
+            srtpParameters: holder.srtpParameters,
+            sctpState: holder.transport && holder.transport.sctpState ? holder.transport.sctpState : null,
             appData: holder.appData,
             time: now()
         }
@@ -616,10 +651,10 @@ export class ServerWorker {
     //
 
     #commandPipeTransportCreate = async (command: PipeTransportCreateCommand, repeatKey: string) => {
-        if (this.#plainTransportsRepeatKey.has(repeatKey)) {
-            let id = this.#plainTransportsRepeatKey.get(repeatKey)!;
-            let holder = this.#plainTransports.get(id)!;
-            return this.#getPlainTransportState(id, holder);
+        if (this.#pipeTransportsRepeatKey.has(repeatKey)) {
+            let id = this.#pipeTransportsRepeatKey.get(repeatKey)!;
+            let holder = this.#pipeTransports.get(id)!;
+            return this.#getPipeTransportState(id, holder);
         }
         let routerHolder = this.#routers.get(command.routerId);
         if (!routerHolder) {
@@ -632,7 +667,7 @@ export class ServerWorker {
         let id = randomKey();
         let appData = command.args.appData || {};
         let tr = await router.createPipeTransport({
-            listenIp: command.args.listenIp,
+            listenIp: this.#listenIp.ip,
             enableSctp: command.args.enableSctp,
             numSctpStreams: command.args.numSctpStreams,
             maxSctpMessageSize: command.args.maxSctpMessageSize,
@@ -661,6 +696,8 @@ export class ServerWorker {
             routerId: command.routerId,
             appData: appData,
             tuple: tr.tuple,
+            sctpParameters: tr.sctpParameters ? tr.sctpParameters : null,
+            srtpParameters: tr.srtpParameters ? tr.srtpParameters : null,
             connectCalled: false
         };
         this.#pipeTransportsRepeatKey.set(repeatKey, id);
@@ -686,6 +723,7 @@ export class ServerWorker {
                 srtpParameters: command.args.srtpParameters
             });
         }
+        holder.tuple = holder.transport.tuple;
 
         return this.#getPipeTransportState(command.args.id, holder);
     };
@@ -710,7 +748,9 @@ export class ServerWorker {
             id,
             closed: !holder.transport,
             tuple: holder.tuple,
-            srtpParameters: holder.transport && holder.transport.srtpParameters ? holder.transport.srtpParameters : null,
+            srtpParameters: holder.srtpParameters,
+            sctpParameters: holder.sctpParameters,
+            sctpState: holder.transport && holder.transport.sctpState ? holder.transport.sctpState : null,
             appData: holder.appData,
             time: now()
         }

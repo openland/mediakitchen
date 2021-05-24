@@ -8,7 +8,9 @@ import {
     dtlsStateCodec,
     rtpParametersCodec,
     transportTupleCodec,
-    srtpParametersCodec
+    srtpParametersCodec,
+    sctpParametersCodec,
+    srtpStateCodec
 } from './common';
 
 export const routerStateCodec = t.type({
@@ -39,6 +41,9 @@ export const plainTransportStateCodec = t.type({
     appData: simpleMapCodec,
     tuple: transportTupleCodec,
     rtcpTuple: t.union([transportTupleCodec, t.null]),
+    sctpParameters: t.union([sctpParametersCodec, t.null]),
+    sctpState: t.union([srtpStateCodec, t.null]),
+    srtpParameters: t.union([srtpParametersCodec, t.null]),
     time: t.number
 });
 export type PlainTransportState = t.TypeOf<typeof plainTransportStateCodec>;
@@ -48,6 +53,8 @@ export const pipeTransportStateCodec = t.type({
     closed: t.boolean,
     appData: simpleMapCodec,
     tuple: transportTupleCodec,
+    sctpParameters: t.union([sctpParametersCodec, t.null]),
+    sctpState: t.union([srtpStateCodec, t.null]),
     srtpParameters: t.union([srtpParametersCodec, t.null]),
     time: t.number
 });
