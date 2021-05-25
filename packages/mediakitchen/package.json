@@ -1,6 +1,6 @@
 {
   "name": "mediakitchen",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Clustered Mediasoup server",
   "main": "dist/index.js",
   "repository": "https://github.com/openland/mediakitchen.git",
@@ -12,6 +12,6 @@
     "build": "yarn clean && yarn build"
   },
   "dependencies": {
-    "mediakitchen-common": "2.0.3"
+    "mediakitchen-common": "2.1.0"
   }
 }
