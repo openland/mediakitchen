@@ -1,4 +1,3 @@
-import { StatsCommand, StatsResponse } from './../../mediakitchen-common/src/wire/commands';
 import * as nats from 'ts-nats';
 import * as mediasoup from 'mediasoup';
 import debug from 'debug';
@@ -63,7 +62,9 @@ import {
     randomKey,
     TransportTuple,
     now,
-    AsyncLockMap
+    AsyncLockMap,
+    StatsCommand,
+    StatsResponse
 } from 'mediakitchen-common';
 
 interface RouterHolder {
