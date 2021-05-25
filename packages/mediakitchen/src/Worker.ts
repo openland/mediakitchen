@@ -21,6 +21,10 @@ export class Worker {
         return this.#worker.status;
     }
 
+    get api() {
+        return this.#worker.api;
+    }
+
     async createRouter(args: RouterCreateCommand['args'], retryKey: string) {
         return (await this.#worker.createRouter(args, retryKey)).facade;
     }

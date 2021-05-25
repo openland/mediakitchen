@@ -63,6 +63,10 @@ export class KitchenWorker {
         return this.#facade;
     }
 
+    get api() {
+        return this.#api;
+    }
+
     //
     // Actions
     //
