@@ -1,3 +1,4 @@
+import { WebRtcTransportStats, PipeTransportStats, PlainTransportStats } from './../Stats';
 import { ConnectionInfo } from '../ConnectionInfo';
 import {
     Commands,
@@ -34,10 +35,12 @@ import {
     pipeTransportCreateResponseCodec,
     PipeTransportConnectCommand,
     pipeTransportConnectResponseCodec,
-    pipeTransportCloseResponseCodec
+    pipeTransportCloseResponseCodec,
+    statsResponseCodec
 } from 'mediakitchen-common';
 import * as nats from 'ts-nats';
 import * as t from 'io-ts';
+import { ConsumerStats, ProducerStats } from '../Stats';
 
 export class KitchenApi {
     #id: string;
@@ -61,94 +64,114 @@ export class KitchenApi {
 
     // Router
 
-    createRouter = async (command: RouterCreateCommand['args'], retryKey: string) => {
-        return await this.#doCommand({ type: 'router-create', args: command }, retryKey, routerCreateResponseCodec);
+    createRouter = (command: RouterCreateCommand['args'], retryKey: string) => {
+        return this.#doCommand({ type: 'router-create', args: command }, retryKey, routerCreateResponseCodec);
     }
 
-    closeRouter = async (id: string) => {
-        return await this.#doCommand({ type: 'router-close', args: { id } }, '', routerCloseResponseCodec);
+    closeRouter = (id: string) => {
+        return this.#doCommand({ type: 'router-close', args: { id } }, '', routerCloseResponseCodec);
     }
 
     // WebRTC Transport
 
-    createWebRtcTransport = async (routerId: string, command: WebRTCTransportCreateCommand['args'], retryKey: string) => {
-        return await this.#doCommand({ type: 'transport-webrtc-create', routerId, args: command }, retryKey, webRTCTransportCreateResponseCodec);
+    createWebRtcTransport = (routerId: string, command: WebRTCTransportCreateCommand['args'], retryKey: string) => {
+        return this.#doCommand({ type: 'transport-webrtc-create', routerId, args: command }, retryKey, webRTCTransportCreateResponseCodec);
     }
 
-    connectWebRtcTransport = async (command: WebRTCTransportConnectCommand['args']) => {
-        return await this.#doCommand({ type: 'transport-webrtc-connect', args: command }, '', webRtcTransportConnectResponseCodec);
+    connectWebRtcTransport = (command: WebRTCTransportConnectCommand['args']) => {
+        return this.#doCommand({ type: 'transport-webrtc-connect', args: command }, '', webRtcTransportConnectResponseCodec);
     }
 
-    restartWebRtcTransport = async (id: string) => {
-        return await this.#doCommand({ type: 'transport-webrtc-restart', args: { id } }, '', webRtcTransportRestartResponseCodec);
+    restartWebRtcTransport = (id: string) => {
+        return this.#doCommand({ type: 'transport-webrtc-restart', args: { id } }, '', webRtcTransportRestartResponseCodec);
     }
 
-    closeWebRtcTransport = async (id: string) => {
-        return await this.#doCommand({ type: 'transport-webrtc-close', args: { id } }, '', webRtcTransportCloseResponseCodec);
+    closeWebRtcTransport = (id: string) => {
+        return this.#doCommand({ type: 'transport-webrtc-close', args: { id } }, '', webRtcTransportCloseResponseCodec);
+    }
+
+    getWebRtcTransportStats = (id: string) => {
+        return this.#getStats<WebRtcTransportStats>(id);
     }
 
     // Plain Transport
 
-    createPlainTransport = async (routerId: string, command: PlainTransportCreateCommand['args'], retryKey: string) => {
-        return await this.#doCommand({ type: 'transport-plain-create', routerId, args: command }, retryKey, plainTransportCreateResponseCodec);
+    createPlainTransport = (routerId: string, command: PlainTransportCreateCommand['args'], retryKey: string) => {
+        return this.#doCommand({ type: 'transport-plain-create', routerId, args: command }, retryKey, plainTransportCreateResponseCodec);
     }
 
-    connectPlainTransport = async (command: PlainTransportConnectCommand['args']) => {
-        return await this.#doCommand({ type: 'transport-plain-connect', args: command }, '', plainTransportCreateResponseCodec);
+    connectPlainTransport = (command: PlainTransportConnectCommand['args']) => {
+        return this.#doCommand({ type: 'transport-plain-connect', args: command }, '', plainTransportCreateResponseCodec);
     }
 
-    closePlainTransport = async (id: string) => {
-        return await this.#doCommand({ type: 'transport-plain-close', args: { id } }, '', plainTransportCloseResponseCodec);
+    closePlainTransport = (id: string) => {
+        return this.#doCommand({ type: 'transport-plain-close', args: { id } }, '', plainTransportCloseResponseCodec);
+    }
+
+    getPlainTransportStats = (id: string) => {
+        return this.#getStats<PlainTransportStats>(id);
     }
 
     // Pipe Transport
 
-    createPipeTransport = async (routerId: string, command: PipeTransportCreateCommand['args'], retryKey: string) => {
-        return await this.#doCommand({ type: 'transport-pipe-create', routerId, args: command }, retryKey, pipeTransportCreateResponseCodec);
+    createPipeTransport = (routerId: string, command: PipeTransportCreateCommand['args'], retryKey: string) => {
+        return this.#doCommand({ type: 'transport-pipe-create', routerId, args: command }, retryKey, pipeTransportCreateResponseCodec);
     }
 
-    connectPipeTransport = async (command: PipeTransportConnectCommand['args']) => {
-        return await this.#doCommand({ type: 'transport-pipe-connect', args: command }, '', pipeTransportConnectResponseCodec);
+    connectPipeTransport = (command: PipeTransportConnectCommand['args']) => {
+        return this.#doCommand({ type: 'transport-pipe-connect', args: command }, '', pipeTransportConnectResponseCodec);
     }
 
-    closePipeTransport = async (id: string) => {
-        return await this.#doCommand({ type: 'transport-pipe-close', args: { id } }, '', pipeTransportCloseResponseCodec);
+    closePipeTransport = (id: string) => {
+        return this.#doCommand({ type: 'transport-pipe-close', args: { id } }, '', pipeTransportCloseResponseCodec);
+    }
+
+    getPipeTransportStats = (id: string) => {
+        return this.#getStats<PipeTransportStats>(id);
     }
 
     // Producer
 
-    createProducer = async (transportId: string, command: ProduceCommand['args'], retryKey: string) => {
-        return await this.#doCommand({ type: 'produce-create', transportId, args: command }, retryKey, produceResponseCodec)
+    createProducer = (transportId: string, command: ProduceCommand['args'], retryKey: string) => {
+        return this.#doCommand({ type: 'produce-create', transportId, args: command }, retryKey, produceResponseCodec)
     }
 
-    pauseProducer = async (producerId: string) => {
-        return await this.#doCommand({ type: 'produce-pause', args: { id: producerId } }, '', producePauseResponseCodec);
+    pauseProducer = (producerId: string) => {
+        return this.#doCommand({ type: 'produce-pause', args: { id: producerId } }, '', producePauseResponseCodec);
     }
 
-    resumeProducer = async (producerId: string) => {
-        return await this.#doCommand({ type: 'produce-resume', args: { id: producerId } }, '', produceResumeResponseCodec);
+    resumeProducer = (producerId: string) => {
+        return this.#doCommand({ type: 'produce-resume', args: { id: producerId } }, '', produceResumeResponseCodec);
     }
 
-    closeProducer = async (producerId: string) => {
-        return await this.#doCommand({ type: 'produce-close', args: { id: producerId } }, '', produceCloseResponseCodec);
+    closeProducer = (producerId: string) => {
+        return this.#doCommand({ type: 'produce-close', args: { id: producerId } }, '', produceCloseResponseCodec);
+    }
+
+    getProducerStats = (id: string) => {
+        return this.#getStats<ProducerStats>(id);
     }
 
     // Consumer
 
-    createConsumer = async (transportId: string, producerId: string, command: ConsumeCommand['args'], retryKey: string) => {
-        return await this.#doCommand({ type: 'consume-create', transportId, producerId, args: command }, retryKey, consumeResponseCodec);
+    createConsumer = (transportId: string, producerId: string, command: ConsumeCommand['args'], retryKey: string) => {
+        return this.#doCommand({ type: 'consume-create', transportId, producerId, args: command }, retryKey, consumeResponseCodec);
     }
 
-    pauseConsumer = async (consumerId: string) => {
-        return await this.#doCommand({ type: 'consume-pause', args: { id: consumerId } }, '', consumePauseResponseCodec);
+    pauseConsumer = (consumerId: string) => {
+        return this.#doCommand({ type: 'consume-pause', args: { id: consumerId } }, '', consumePauseResponseCodec);
     }
 
-    resumeConsumer = async (consumerId: string) => {
-        return await this.#doCommand({ type: 'consume-resume', args: { id: consumerId } }, '', consumeResumeResponseCodec);
+    resumeConsumer = (consumerId: string) => {
+        return this.#doCommand({ type: 'consume-resume', args: { id: consumerId } }, '', consumeResumeResponseCodec);
     }
 
-    closeConsumer = async (consumerId: string) => {
-        return await this.#doCommand({ type: 'consume-close', args: { id: consumerId } }, '', consumeCloseResponseCodec);
+    closeConsumer = (consumerId: string) => {
+        return this.#doCommand({ type: 'consume-close', args: { id: consumerId } }, '', consumeCloseResponseCodec);
+    }
+
+    getConsumerStats = (id: string) => {
+        return this.#getStats<ConsumerStats>(id);
     }
 
     // Worker
@@ -319,5 +342,14 @@ export class KitchenApi {
             }
         }
         throw Error('Unknown error');
+    }
+
+    #getStats = async <T>(id: string) => {
+        let res = await this.#doCommand({ type: 'get-stats', args: { id } }, '', statsResponseCodec);
+        if (res.data) {
+            return JSON.parse(res.data) as T;
+        } else {
+            return null;
+        }
     }
 }

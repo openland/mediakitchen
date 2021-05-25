@@ -25,3 +25,4 @@ export { Producer } from './Producer';
 export { Consumer } from './Consumer';
 export { WebRtcTransport } from './WebRtcTransport';
 export { PlainTransport } from './PlainTransport';
+export { ConsumerStats, ProducerStats, WebRtcTransportStats, PipeTransportStats } from './Stats';

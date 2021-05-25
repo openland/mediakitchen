@@ -53,6 +53,10 @@ export class PlainTransport {
         return (await this.#transport.consume(producerId, args, retryKey)).facade;
     }
 
+    async getStats() {
+        return this.#transport.getStats();
+    }
+
     async close() {
         await this.#transport.close();
     }

@@ -53,6 +53,10 @@ export class PipeTransport {
         await this.#transport.close();
     }
 
+    async getStats() {
+        return this.#transport.getStats();
+    }
+
     toString() {
         return `PipeTransport{` +
             `id:${this.id},` +

@@ -146,6 +146,10 @@ export {
     ConsumeCloseResponse,
     consumeCloseResponseCodec,
 
+    StatsCommand,
+    StatsResponse,
+    statsResponseCodec,
+
     commandsCodec,
     Commands,
     commandBoxCodec,

@@ -42,6 +42,14 @@ export class KitchenTransportPipe extends KitchenTransport<PipeTransportState> {
         this.applyState(r);
     }
 
+    async getStats() {
+        if (!this.closed) {
+            return await this.api.getPipeTransportStats(this.id);
+        } else {
+            return null;
+        }
+    }
+
     applyClosed() {
         if (this.sctpState) {
             this.sctpState = 'closed';

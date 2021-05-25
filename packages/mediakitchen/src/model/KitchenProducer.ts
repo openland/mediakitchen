@@ -50,6 +50,14 @@ export class KitchenProducer {
         }
     }
 
+    async getStats() {
+        if (!this.closed) {
+            return await this.#api.getProducerStats(this.id);
+        } else {
+            return null;
+        }
+    }
+
     async close() {
         if (!this.closed) {
             this.closed = true;

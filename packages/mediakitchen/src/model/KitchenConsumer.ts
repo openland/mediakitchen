@@ -60,6 +60,14 @@ export class KitchenConsumer {
         }
     }
 
+    async getStats() {
+        if (!this.closed) {
+            return await this.#api.getConsumerStats(this.id);
+        } else {
+            return null;
+        }
+    }
+
     onClosed = () => {
         this.#closedExternally = true;
         if (!this.closed) {

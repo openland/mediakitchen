@@ -1,3 +1,4 @@
+import { StatsCommand, StatsResponse } from './../../mediakitchen-common/src/wire/commands';
 import * as nats from 'ts-nats';
 import * as mediasoup from 'mediasoup';
 import debug from 'debug';
@@ -223,6 +224,8 @@ export class ServerWorker {
             return this.#commandConsumeResume(command);
         } else if (command.type === 'consume-close') {
             return this.#commandConsumeClose(command);
+        } else if (command.type === 'get-stats') {
+            return this.#commandGetStats(command);
         } else if (command.type === 'worker-kill') {
             this.close();
             return {};
@@ -1027,6 +1030,36 @@ export class ServerWorker {
         holder.consumer.close();
         this.#onConsumerClose(command.args.id, holder);
         return this.#getConsumerState(command.args.id, holder);
+    }
+
+    #commandGetStats = async (command: StatsCommand): Promise<StatsResponse> => {
+
+        let webrtcTransport = this.#webRtcTransports.get(command.args.id);
+        if (webrtcTransport && webrtcTransport.transport) {
+            return { data: JSON.stringify(await webrtcTransport.transport.getStats()) };
+        }
+
+        let pipeTransport = this.#pipeTransports.get(command.args.id);
+        if (pipeTransport && pipeTransport.transport) {
+            return { data: JSON.stringify(await pipeTransport.transport.getStats()) };
+        }
+
+        let plainTransport = this.#plainTransports.get(command.args.id);
+        if (plainTransport && plainTransport.transport) {
+            return { data: JSON.stringify(await plainTransport.transport.getStats()) };
+        }
+
+        let consumer = this.#consumers.get(command.args.id);
+        if (consumer && consumer.consumer) {
+            return { data: JSON.stringify(await consumer.consumer.getStats()) };
+        }
+
+        let producer = this.#producers.get(command.args.id);
+        if (producer && producer.producer) {
+            return { data: JSON.stringify(await producer.producer.getStats()) };
+        }
+
+        return { data: null };
     }
 
     #onConsumerClose = (id: string, holder: ConsumerHolder) => {

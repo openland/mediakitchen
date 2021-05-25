@@ -43,6 +43,10 @@ export class Producer {
         return this.#producer.resume();
     }
 
+    async getStats() {
+        return this.#producer.getStats();
+    }
+
     async close() {
         await this.#producer.close();
     }

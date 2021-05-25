@@ -60,6 +60,14 @@ export class KitchenTransportWebRTC extends KitchenTransport<WebRtcTransportStat
         this.applyState(r);
     }
 
+    async getStats() {
+        if (!this.closed) {
+            return await this.api.getWebRtcTransportStats(this.id);
+        } else {
+            return null;
+        }
+    }
+
     applyStateInternal(state: WebRtcTransportState) {
         this.dtlsState = state.dtlsState;
         this.iceState = state.iceState;

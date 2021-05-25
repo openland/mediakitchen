@@ -43,6 +43,10 @@ export class Consumer {
         await this.#consumer.resume();
     }
 
+    async getStats() {
+        return this.#consumer.getStats();
+    }
+
     async close() {
         await this.#consumer.close();
     }

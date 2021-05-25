@@ -395,6 +395,27 @@ export const consumeCloseResponseCodec = consumerStateCodec;
 export type ConsumeCloseResponse = t.TypeOf<typeof consumeCloseResponseCodec>;
 
 //
+// Stats
+//
+
+//
+// Produce Create Command
+//
+
+const statsCommandCodec = t.type({
+    type: t.literal('get-stats'),
+    args: t.type({
+        id: t.string,
+    })
+});
+export type StatsCommand = t.TypeOf<typeof statsCommandCodec>;
+
+export const statsResponseCodec = t.type({
+    data: t.union([t.string, t.null])
+});;
+export type StatsResponse = t.TypeOf<typeof statsResponseCodec>;
+
+//
 // All Commands
 //
 
@@ -427,7 +448,9 @@ export const commandsCodec = t.union([
     consumeCommandCodec,
     consumePauseCommandCodec,
     consumeResumeCommandCodec,
-    consumeCloseCommandCodec
+    consumeCloseCommandCodec,
+
+    statsCommandCodec
 ]);
 
 export type Commands = t.TypeOf<typeof commandsCodec>;

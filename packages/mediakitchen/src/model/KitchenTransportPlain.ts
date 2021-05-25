@@ -45,6 +45,14 @@ export class KitchenTransportPlain extends KitchenTransport<PlainTransportState>
         this.applyState(r);
     }
 
+    async getStats() {
+        if (!this.closed) {
+            return await this.api.getPlainTransportStats(this.id);
+        } else {
+            return null;
+        }
+    }
+
     applyClosed() {
         if (this.sctpState) {
             this.sctpState = 'closed';
